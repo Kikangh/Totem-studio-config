@@ -1,12 +1,13 @@
-#define ZMK_MOUSE_DEFAULT_MOVE_VAL 6000  // 1500 puis 2000 puis 3000 puis 4000...
-#define ZMK_MOUSE_DEFAULT_SCRL_VAL 70    // 20
+// ZMK v0.3 : les macros ont été renommées ZMK_POINTING_* (les anciennes ZMK_MOUSE_* sont ignorées -> défaut 600 / 10)
+#define ZMK_POINTING_DEFAULT_MOVE_VAL 2500  // défaut 600 ; ancien essai (non appliqué) : 6000
+#define ZMK_POINTING_DEFAULT_SCRL_VAL 40    // défaut 10 ; ancien essai (non appliqué) : 70
 
-#include <dt-bindings/zmk/mouse.h>
+#include <dt-bindings/zmk/pointing.h>
 #include <behaviors/mouse_keys.dtsi>
 
 &mmv {
     acceleration-exponent = <1>;      // 1
-    time-to-max-speed-ms = <500>;     // 300
+    time-to-max-speed-ms = <300>;     // défaut 300 ; avant : 500
     delay-ms = <0>;                   // 0
 };
 
