@@ -30,12 +30,12 @@
         compatible = "zmk,combos";
 
 // Spacing combos
-COMBO(ret,         &kp RET,              15 26,         OPTIM ARROW KEYPAD SYMBOL NUMBERS MOUSE, 150, 20) // require-prior-idle-ms to 0 instead of 80, & TERM to 150, to try and prevent accidental input of "pg" instead of sending "Return" 22/11/2024 term set to 50 to see if better "return activation occurs"...26/11/2024 seemed better with 150 - reverted
+COMBO(ret,         &kp RET,              15 26,         OPTIM ARROW KEYPAD SYMBOL NUMBERS MOUSE, 150, 0) // 2026-10-28 : require-prior-idle-ms 20 -> 0 (le combo ne doit plus être désactivé par une frappe récente). Historique : require-prior-idle-ms to 0 instead of 80, & TERM to 150, to try and prevent accidental input of "pg" instead of sending "Return" 22/11/2024 term set to 50 to see if better "return activation occurs"...26/11/2024 seemed better with 150 - reverted
 COMBO(ret2,        &kp RET,              13 24,         OPTIM ARROW KEYPAD SYMBOL NUMBERS MOUSE, 150, 100)
 COMBO(del,         &kp DEL,               5 15,         OPTIM KEYPAD SYMBOL NUMBERS MOUSE, 50, 100)
 COMBO(bspc,        &kp BSPC,              6 16,         OPTIM ARROW KEYPAD SYMBOL NUMBERS, 40, 0) //require-prior-idle-ms disabled with -1, I want it to trigger no matter what. Time-out to 250 in order to get a more permissive trigger of the combo.
 COMBO(bspcword,    &kp LA(BSPC),          7 17,         OPTIM ARROW KEYPAD SYMBOL NUMBERS MOUSE, 30, 80) //require-prior-idle-ms to 80 instead of 100, to ease usage while typing. Trying to make it more of a comittment with 30 timout-ms (term)
-COMBO(tab,         &kp TAB,               5  6,         OPTIM ARROW NUMBERS, 40, 80)
+// COMBO(tab,         &kp TAB,               5  6,         OPTIM ARROW NUMBERS, 40, 80)
 
 COMBO(stab,        &kp LS(TAB),          15 16,         OPTIM KEYPAD SYMBOL NUMBERS, 50, 100)
 
@@ -51,15 +51,15 @@ COMBO(op_at,       &kp OP_AT,            28 29,         OPTIM ARROW NUMBERS, 50,
 COMBO(op_unds,     &kp OP_UNDS,          26 27,         OPTIM ARROW NUMBERS, 50, 100)
 COMBO(op_min,      &kp OP_MIN,           23 24,         OPTIM ARROW NUMBERS, 50, 100)
 COMBO(op_plus,     &kp OP_PLUS,          22 23,         OPTIM ARROW NUMBERS, 50, 100)
-COMBO(op_oppar,    &kp N9,                8 18,         OPTIM ARROW NUMBERS KEYPAD SYMBOL, 50, 100)
-COMBO(op_clpar,    &kp N0,                9 19,         OPTIM ARROW NUMBERS KEYPAD SYMBOL, 50, 100)
+// COMBO(op_oppar,    &kp N9,                8 18,         OPTIM ARROW NUMBERS KEYPAD SYMBOL, 50, 100)
+// COMBO(op_clpar,    &kp N0,                9 19,         OPTIM ARROW NUMBERS KEYPAD SYMBOL, 50, 100)
 
 // Layers combos
 COMBO(lay-arrow,   &tog ARROW,            1  2  3,      OPTIM ARROW, 50, 100)
 COMBO(lay-number,  &tog NUMBERS,          6  7  8,      OPTIM ARROW NUMBERS, 50, 100)
-COMBO(to-0,        &to 0,                22 23 24,      ARROW NUMBERS, 50, 100)
+// COMBO(to-0,        &to 0,                22 23 24,      ARROW NUMBERS, 50, 100) // 2026-10-28 : désactivé, mêmes touches que « esc » sur ARROW et NUMBERS
 COMBO(to-0-fromkeypad, &to 0,             1  2  3,      KEYPAD, 50, 100)
-COMBO(to-keypad,   &to 4,                   35 37,      OPTIM, 50, 100)
+COMBO(to-keypad,   &to KEYPAD,              35 37,      OPTIM, 50, 100)
 
 // Editing combos
 COMBO(op-cut,      &kp LG(LBKT),          1 11,         OPTIM NUMBERS KEYPAD SYMBOL MOUSE, 50, 100)

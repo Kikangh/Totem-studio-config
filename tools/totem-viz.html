@@ -1,0 +1,529 @@
+<!doctype html>
+<html lang="fr">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Totem Optimot</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<style>
+/* Layout : une planche de clavier (calque actif + combos) en tête, inspecteur dessous,
+   puis deux colonnes « combos du calque » / « macros & remarques » qui s'empilent sur mobile. */
+:root {
+  --bg: #eceff3; --surface: #f8f9fb; --cap: #ffffff; --cap-edge: #c6ccd7; --cap-shadow: #d7dce4;
+  --ink: #1b2030; --muted: #5a6273; --faint: #9aa2b1; --line: #d9dde5;
+  --accent: #d24a12; --accent-soft: #fbe3d6; --layer: #2b62d9; --mod: #6b7385;
+  --c-spacing: #0d8478; --c-chars: #7448d0; --c-layers: #a8700f; --c-editing: #2b62d9;
+  --c-apps: #bd3a74; --c-appspec: #557214; --c-escape: #c0392b; --c-system: #586170; --c-other: #6f6f6f;
+  --warn: #b25b00; --warn-bg: #fff1dc; --info: #3c5a8a; --info-bg: #e5edf9;
+  --font-sans: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --font-key: -apple-system, "SF Pro Text", "IBM Plex Sans", "Segoe UI Symbol", "Apple Symbols", sans-serif;
+  --radius: 10px;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #12151b; --surface: #191d25; --cap: #232834; --cap-edge: #363e4e; --cap-shadow: #0b0d11;
+  --ink: #e6e9ef; --muted: #a0a8b6; --faint: #646d7d; --line: #2b313d;
+  --accent: #ff8a4c; --accent-soft: #3a2418; --layer: #82a6ff; --mod: #9aa2b2;
+  --c-spacing: #4fd1c0; --c-chars: #b59cff; --c-layers: #f2c14e; --c-editing: #7aa2ff;
+  --c-apps: #ff8fbf; --c-appspec: #b5d36b; --c-escape: #ff8a7a; --c-system: #a9b2c0; --c-other: #b0b0b0;
+  --warn: #ffb557; --warn-bg: #33250f; --info: #9dbbf0; --info-bg: #182338;
+  color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #12151b; --surface: #191d25; --cap: #232834; --cap-edge: #363e4e; --cap-shadow: #0b0d11;
+  --ink: #e6e9ef; --muted: #a0a8b6; --faint: #646d7d; --line: #2b313d;
+  --accent: #ff8a4c; --accent-soft: #3a2418; --layer: #82a6ff; --mod: #9aa2b2;
+  --c-spacing: #4fd1c0; --c-chars: #b59cff; --c-layers: #f2c14e; --c-editing: #7aa2ff;
+  --c-apps: #ff8fbf; --c-appspec: #b5d36b; --c-escape: #ff8a7a; --c-system: #a9b2c0; --c-other: #b0b0b0;
+  --warn: #ffb557; --warn-bg: #33250f; --info: #9dbbf0; --info-bg: #182338;
+  color-scheme: dark; }
+
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-sans); font-size: 14px; line-height: 1.45; }
+.wrap { max-width: 1240px; margin: 0 auto; padding-block: 20px 48px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: grid; grid-template-columns: minmax(0, 1fr); gap: 18px; }
+header.top { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 24px; }
+h1 { font-size: 26px; font-weight: 700; letter-spacing: -0.01em; margin: 0; text-wrap: balance; }
+h1 span { color: var(--muted); font-weight: 500; }
+.meta { color: var(--muted); font-size: 12.5px; font-family: var(--font-mono); min-width: 0; overflow-wrap: anywhere; }
+h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin: 0; font-weight: 600; }
+
+.bar { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; }
+.tabs { min-width: 0; flex: 1 1 100%; display: flex; gap: 4px; overflow-x: auto; padding-bottom: 2px; max-width: 100%; scrollbar-width: thin; }
+.tab { border: 1px solid var(--line); background: var(--surface); color: var(--ink); font: inherit; font-weight: 500;
+  padding: 6px 11px; border-radius: 8px; cursor: pointer; white-space: nowrap; display: flex; gap: 7px; align-items: center; }
+.tab .n { font-family: var(--font-mono); font-size: 11px; color: var(--faint); }
+.tab .cnt { font-size: 11px; color: var(--muted); background: var(--bg); border-radius: 99px; padding: 0 6px; font-variant-numeric: tabular-nums; }
+.tab[aria-selected="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.tab[aria-selected="true"] .n, .tab[aria-selected="true"] .cnt { color: var(--bg); background: transparent; }
+.tab:focus-visible, button:focus-visible, .badge:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: var(--surface); }
+.seg button { border: 0; background: transparent; color: var(--muted); font: inherit; font-size: 13px; padding: 5px 10px; cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
+.ctl { display: flex; gap: 8px; align-items: center; color: var(--muted); font-size: 13px; }
+
+.board { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 14px 14px 10px; }
+.svgbox { overflow-x: auto; }
+svg.kb { display: block; width: 100%; min-width: 560px; height: auto; user-select: none; }
+.cap rect { fill: var(--cap); stroke: var(--cap-edge); stroke-width: 2; }
+.cap .shadow { fill: var(--cap-shadow); stroke: none; }
+.cap.none rect.face { fill: transparent; stroke-dasharray: 6 6; }
+.cap.none .shadow { display: none; }
+.cap.trans rect.face { fill: var(--bg); }
+.cap text { fill: var(--ink); font-family: var(--font-key); text-anchor: middle; dominant-baseline: central; }
+.cap .sub { fill: var(--muted); font-size: 12px; }
+.cap .hold { font-size: 13px; font-weight: 600; fill: var(--mod); }
+.cap .hold.layer { fill: var(--layer); }
+.cap .main.macro { fill: var(--c-apps); font-size: 15px; }
+.cap .main.layerk { fill: var(--layer); font-weight: 600; }
+.cap .main.mouse { fill: var(--c-spacing); }
+.cap .main.system { fill: var(--c-system); }
+.cap .main.dead { fill: var(--c-chars); }
+.cap .pos { fill: var(--faint); font-family: var(--font-mono); font-size: 10px; text-anchor: start; }
+.cap { cursor: pointer; }
+.cap:hover rect.face { stroke: var(--ink); }
+.cap.sel rect.face { stroke: var(--accent); stroke-width: 4; }
+.cap.hit rect.face { fill: var(--accent-soft); stroke: var(--accent); stroke-width: 3; }
+svg.focus .badge:not(.on), svg.focus .wire:not(.on) { opacity: .12; }
+.wire line { stroke-width: 2.5; stroke-linecap: round; opacity: .5; }
+.wire circle { opacity: .9; }
+.wire.on line { opacity: 1; stroke-width: 4; }
+.badge { cursor: pointer; }
+.badge rect { stroke-width: 2; }
+.badge text { font-family: var(--font-key); font-size: 13px; font-weight: 600; text-anchor: middle; dominant-baseline: central; fill: var(--surface); }
+.badge.on rect { stroke: var(--ink); stroke-width: 3; }
+.hidden-combos .badge, .hidden-combos .wire { display: none; }
+
+.legend { display: flex; flex-wrap: wrap; gap: 6px 8px; margin-top: 8px; }
+.chip { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); border-radius: 99px; padding: 2px 10px 2px 6px;
+  font-size: 12.5px; background: var(--surface); color: var(--ink); cursor: pointer; font-family: inherit; }
+.chip i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+.chip[aria-pressed="false"] { opacity: .45; }
+
+.inspector { border-top: 1px solid var(--line); margin-top: 10px; padding-top: 10px; min-height: 64px; display: grid; gap: 4px; }
+.inspector .hint { color: var(--muted); }
+.inspector .ttl { font-weight: 600; font-size: 15px; display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
+.inspector dl { display: grid; grid-template-columns: max-content 1fr; gap: 2px 14px; margin: 0; font-size: 13px; }
+.inspector dt { color: var(--muted); }
+.inspector dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+code, .mono { font-family: var(--font-mono); font-size: 12.5px; }
+
+.cols { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); gap: 18px; align-items: start; }
+@media (max-width: 900px) { .cols { grid-template-columns: minmax(0, 1fr); } }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 14px; display: grid; gap: 12px; min-width: 0; }
+.panel-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+.group h3 { margin: 6px 0 4px; font-size: 12.5px; font-weight: 600; display: flex; gap: 8px; align-items: center; }
+.group h3 i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+.group h3 .src { color: var(--faint); font-weight: 400; font-family: var(--font-mono); font-size: 11.5px; }
+.row { display: grid; grid-template-columns: 150px 110px minmax(0, 1fr) 118px; gap: 10px; align-items: center;
+  padding: 6px 8px; border-radius: 8px; cursor: pointer; }
+.row:hover, .row.on { background: var(--accent-soft); }
+.row.inactive { opacity: .55; }
+.keys { display: flex; gap: 3px; align-items: center; flex-wrap: wrap; }
+.kc { min-width: 26px; height: 26px; padding: 0 5px; border: 1px solid var(--cap-edge); border-bottom-width: 2px; border-radius: 5px;
+  background: var(--cap); display: inline-flex; align-items: center; justify-content: center; font-family: var(--font-key); font-size: 13px; }
+.kc.empty { color: var(--faint); }
+.plus { color: var(--faint); font-size: 11px; }
+.out { font-family: var(--font-key); font-weight: 600; font-size: 15px; display: flex; gap: 6px; align-items: baseline; }
+.out small { font-weight: 400; color: var(--muted); font-size: 11.5px; font-family: var(--font-sans); }
+.name { min-width: 0; }
+.name .id { font-family: var(--font-mono); font-size: 12.5px; }
+.name .ls { color: var(--muted); font-size: 11.5px; overflow-wrap: anywhere; }
+.timing { font-family: var(--font-mono); font-size: 11.5px; color: var(--muted); text-align: right; font-variant-numeric: tabular-nums; }
+@media (max-width: 640px) {
+  .row { grid-template-columns: minmax(0, 1fr) auto; }
+  .row .name { grid-column: 1 / -1; }
+  .row .timing { text-align: left; grid-column: 1 / -1; }
+}
+.empty-note { color: var(--muted); padding: 8px; }
+
+.macro { border: 1px solid var(--line); border-radius: var(--radius); padding: 10px; display: grid; gap: 8px; }
+.macro .mh { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; align-items: baseline; }
+.macro .mh b { font-family: var(--font-mono); font-weight: 500; }
+.macro .mh span { color: var(--muted); font-size: 12.5px; }
+.steps { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+.step { display: inline-flex; align-items: center; gap: 3px; font-size: 12px; color: var(--muted); }
+.step .kc { font-size: 13px; color: var(--ink); }
+.step .kc.eff { border-color: var(--c-chars); }
+.step .v { font-size: 11px; }
+.arrow { color: var(--faint); }
+.used { font-size: 12px; color: var(--muted); }
+.result { font-size: 12.5px; }
+.result b { font-family: var(--font-key); font-size: 14px; background: var(--bg); border-radius: 4px; padding: 0 4px; }
+
+.note { border-radius: 8px; padding: 8px 10px; font-size: 13px; display: flex; gap: 8px; align-items: flex-start; cursor: pointer; }
+.note.warn { background: var(--warn-bg); }
+.note.info { background: var(--info-bg); }
+.note .lvl { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; padding-top: 2px; white-space: nowrap; }
+.note.warn .lvl { color: var(--warn); }
+.note.info .lvl { color: var(--info); }
+footer { color: var(--muted); font-size: 12px; }
+@media (prefers-reduced-motion: no-preference) { .badge, .wire, .row { transition: opacity .15s, background-color .15s; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <h1>Totem <span>· Optimot</span></h1>
+    <div class="meta" id="meta"></div>
+  </header>
+
+  <div class="bar">
+    <div class="tabs" id="tabs" role="tablist" aria-label="Calques"></div>
+  </div>
+  <div class="bar">
+    <div class="ctl">Libellés
+      <div class="seg" id="labelMode">
+        <button type="button" id="lbl-opt" data-v="opt" aria-pressed="true">Optimot</button>
+        <button type="button" id="lbl-q" data-v="q" aria-pressed="false">Keycodes ZMK</button>
+      </div>
+    </div>
+    <div class="ctl">Combos
+      <div class="seg" id="comboMode">
+        <button type="button" id="cmb-on" data-v="on" aria-pressed="true">Affichés</button>
+        <button type="button" id="cmb-off" data-v="off" aria-pressed="false">Masqués</button>
+      </div>
+    </div>
+  </div>
+
+  <section class="board">
+    <div class="svgbox"><svg class="kb" id="kb" role="img" aria-label="Clavier Totem"></svg></div>
+    <div class="legend" id="legend"></div>
+    <div class="inspector" id="insp"></div>
+  </section>
+
+  <div class="cols">
+    <section class="panel">
+      <div class="panel-head">
+        <h2 id="comboTitle">Combos</h2>
+        <div class="seg" id="scope">
+          <button type="button" id="scope-layer" data-v="layer" aria-pressed="true">Ce calque</button>
+          <button type="button" id="scope-all" data-v="all" aria-pressed="false">Tous</button>
+        </div>
+      </div>
+      <div id="comboList"></div>
+    </section>
+    <div style="display:grid;gap:18px;min-width:0">
+      <section class="panel">
+        <h2>Macros et comportements</h2>
+        <div id="macros" style="display:grid;gap:10px"></div>
+      </section>
+      <section class="panel">
+        <h2>Remarques sur la configuration</h2>
+        <div id="notes" style="display:grid;gap:6px"></div>
+      </section>
+    </div>
+  </div>
+  <footer id="foot"></footer>
+</div>
+
+<script>const DATA={"generated": "2026-10-28 11:47", "keylayout": "Optimot-Qu.keylayout", "layout": [{"w": 100, "h": 100, "x": 70, "y": 136, "r": -10.0, "rx": 120, "ry": 186}, {"w": 100, "h": 100, "x": 176, "y": 54, "r": -4.0, "rx": 226, "ry": 104}, {"w": 100, "h": 100, "x": 284, "y": 0, "r": 0.0, "rx": 0, "ry": 0}, {"w": 100, "h": 100, "x": 379, "y": 44, "r": 0.0, "rx": 0, "ry": 0}, {"w": 100, "h": 100, "x": 474, "y": 59, "r": 0.0, "rx": 0, "ry": 0}, {"w": 100, "h": 100, "x": 873, "y": 59, "r": 0.0, "rx": 0, "ry": 0}, {"w": 100, "h": 100, "x": 968, "y": 44, "r": 0.0, "rx": 0, "ry": 0}, {"w": 100, "h": 100, "x": 1062, "y": 0, "r": 0.0, "rx": 0, "ry": 0}, {"w": 100, "h": 100, "x": 1171, "y": 54, "r": 4.0, "rx": 1221, "ry": 104}, {"w": 100, "h": 100, "x": 1277, "y": 136, "r": 10.0, "rx": 1327, "ry": 186}, {"w": 100, "h": 100, "x": 85, "y": 224, "r": -10.0, "rx": 135, "ry": 274}, {"w": 100, "h": 100, "x": 182, "y": 143, "r": -4.0, "rx": 232, "ry": 193}, {"w": 100, "h": 100, "x": 284, "y": 90, "r": 0.0, "rx": 0, "ry": 0}, {"w": 100, "h": 100, "x": 379, "y": 134, "r": 0.0, "rx": 0, "ry": 0}, {"w": 100, "h": 100, "x": 474, "y": 148, "r": 0.0, "rx": 0, "ry": 0}, {"w": 100, "h": 100, "x": 873, "y": 148, "r": 0.0, "rx": 0, "ry": 0}, {"w": 100, "h": 100, "x": 968, "y": 134, "r": 0.0, "rx": 0, "ry": 0}, {"w": 100, "h": 100, "x": 1062, "y": 90, "r": 0.0, "rx": 0, "ry": 0}, {"w": 100, "h": 100, "x": 1165, "y": 143, "r": 4.0, "rx": 1215, "ry": 193}, {"w": 100, "h": 100, "x": 1261, "y": 224, "r": 10.0, "rx": 1311, "ry": 274}, {"w": 100, "h": 100, "x": 0, "y": 289, "r": -10.0, "rx": 50, "ry": 339}, {"w": 100, "h": 100, "x": 101, "y": 312, "r": -10.0, "rx": 151, "ry": 362}, {"w": 100, "h": 100, "x": 188, "y": 233, "r": -4.0, "rx": 238, "ry": 283}, {"w": 100, "h": 100, "x": 284, "y": 179, "r": 0.0, "rx": 0, "ry": 0}, {"w": 100, "h": 100, "x": 379, "y": 223, "r": 0.0, "rx": 0, "ry": 0}, {"w": 100, "h": 100, "x": 474, "y": 238, "r": 0.0, "rx": 0, "ry": 0}, {"w": 100, "h": 100, "x": 873, "y": 238, "r": 0.0, "rx": 0, "ry": 0}, {"w": 100, "h": 100, "x": 968, "y": 223, "r": 0.0, "rx": 0, "ry": 0}, {"w": 100, "h": 100, "x": 1062, "y": 179, "r": 0.0, "rx": 0, "ry": 0}, {"w": 100, "h": 100, "x": 1158, "y": 233, "r": 4.0, "rx": 1208, "ry": 283}, {"w": 100, "h": 100, "x": 1246, "y": 312, "r": 10.0, "rx": 1296, "ry": 362}, {"w": 100, "h": 100, "x": 1346, "y": 289, "r": 10.0, "rx": 1396, "ry": 339}, {"w": 100, "h": 100, "x": 352, "y": 332, "r": 0.0, "rx": 0, "ry": 0}, {"w": 100, "h": 100, "x": 457, "y": 347, "r": 15.0, "rx": 507, "ry": 397}, {"w": 100, "h": 100, "x": 554, "y": 387, "r": 30.0, "rx": 604, "ry": 437}, {"w": 100, "h": 100, "x": 792, "y": 387, "r": -30.0, "rx": 842, "ry": 437}, {"w": 100, "h": 100, "x": 889, "y": 347, "r": -15.0, "rx": 939, "ry": 397}, {"w": 100, "h": 100, "x": 994, "y": 332, "r": 0.0, "rx": 0, "ry": 0}], "layers": [{"name": "OPTIM", "keys": [{"t": "à", "raw": "&agrvtab", "q": "Q", "kind": "key", "morph": "⌘+ → ⇥", "beh": "agrvtab"}, {"t": "j", "raw": "W", "q": "W", "kind": "key"}, {"t": "o", "raw": "E", "q": "E", "kind": "key"}, {"t": "é", "raw": "R", "q": "R", "kind": "key"}, {"t": "b", "raw": "T", "q": "T", "kind": "key"}, {"t": "f", "raw": "Y", "q": "Y", "kind": "key"}, {"t": "d", "raw": "U", "q": "U", "kind": "key"}, {"t": "l", "raw": "I", "q": "I", "kind": "key"}, {"t": "'", "raw": "O", "q": "O", "kind": "key"}, {"t": "qu", "raw": "P", "q": "P", "kind": "key"}, {"t": "a", "raw": "&hll ARROW A", "q": "A", "kind": "key", "hold": "ARROW", "holdKind": "layer", "beh": "hll"}, {"t": "i", "raw": "&hml LCTRL OP_I", "q": "S", "kind": "key", "hold": "⌃", "holdKind": "mod", "beh": "hml", "holdName": "Ctrl"}, {"t": "e", "raw": "&hml LALT OP_E", "q": "D", "kind": "key", "hold": "⌥", "holdKind": "mod", "beh": "hml", "holdName": "Option"}, {"t": "u", "raw": "&hml LGUI OP_U", "q": "F", "kind": "key", "hold": "⌘", "holdKind": "mod", "beh": "hml", "holdName": "Cmd"}, {"t": ",", "raw": "G", "q": "G", "kind": "key"}, {"t": "p", "raw": "H", "q": "H", "kind": "key"}, {"t": "t", "raw": "&hmr RGUI OP_T", "q": "J", "kind": "key", "hold": "⌘", "holdKind": "mod", "beh": "hmr", "holdName": "Cmd"}, {"t": "s", "raw": "&hmr RALT OP_S", "q": "K", "kind": "key", "hold": "⌥", "holdKind": "mod", "beh": "hmr", "holdName": "Option"}, {"t": "r", "raw": "&hmr RCTRL OP_R", "q": "L", "kind": "key", "hold": "⌃", "holdKind": "mod", "beh": "hmr", "holdName": "Ctrl"}, {"t": "n", "raw": "SEMI", "q": "SEMI", "kind": "key"}, {"t": "F10", "raw": "F10", "q": "F10", "kind": "key"}, {"t": "k", "raw": "&hll MOUSE2 OP_K", "q": "NUBS", "kind": "key", "hold": "MOUSE2", "holdKind": "layer", "beh": "hll"}, {"t": "y", "raw": "Z", "q": "Z", "kind": "key"}, {"t": "è", "raw": "X", "q": "X", "kind": "key"}, {"t": ".", "raw": "C", "q": "C", "kind": "key"}, {"t": "w", "raw": "&hll SCREEN OP_W", "q": "V", "kind": "key", "hold": "SCREEN", "holdKind": "layer", "beh": "hll"}, {"t": "g", "raw": "N", "q": "N", "kind": "key"}, {"t": "c", "raw": "&hsr RSHFT OP_C", "q": "M", "kind": "key", "hold": "⇧", "holdKind": "mod", "beh": "hsr", "holdName": "Shift"}, {"t": "m", "raw": "COMMA", "q": "COMMA", "kind": "key"}, {"t": "h", "raw": "DOT", "q": "DOT", "kind": "key"}, {"t": "v", "raw": "FSLH", "q": "FSLH", "kind": "key"}, {"t": "⌫", "raw": "BSPC", "q": "BSPC", "s": "Retour arr.", "kind": "key"}, {"t": "⌥⌘P", "raw": "&lt LOWER CLIPB_HIST", "q": "LG(LA(H))", "name": "CLIPB_HIST", "app": "Raycast", "kind": "key", "hold": "LOWER", "holdKind": "layer", "beh": "lt"}, {"t": "⇥", "raw": "&hsl LSHFT TAB", "q": "TAB", "s": "Tab", "kind": "key", "hold": "⇧", "holdKind": "mod", "beh": "hsl", "holdName": "Shift"}, {"t": "␣", "raw": "&mt LGUI SPACE", "q": "SPACE", "s": "espace", "kind": "key", "hold": "⌘", "holdKind": "mod", "beh": "mt", "holdName": "Cmd"}, {"t": "␣", "raw": "&hlr NUMBERS SPACE", "q": "SPACE", "s": "espace", "kind": "key", "hold": "NUMBERS", "holdKind": "layer", "beh": "hlr"}, {"t": "z", "raw": "&hlr MOUSE OP_Z", "q": "RBKT", "kind": "key", "hold": "MOUSE", "holdKind": "layer", "beh": "hlr"}, {"t": "x", "raw": "LBKT", "q": "LBKT", "kind": "key"}]}, {"name": "LOWER", "keys": [{"t": "F1", "raw": "F1", "q": "F1", "kind": "key"}, {"t": "F2", "raw": "F2", "q": "F2", "kind": "key"}, {"t": "F3", "raw": "F3", "q": "F3", "kind": "key"}, {"t": "F4", "raw": "F4", "q": "F4", "kind": "key"}, {"t": "F5", "raw": "F5", "q": "F5", "kind": "key"}, {"t": "⌃⌥⇧F", "raw": "LA(LC(LS(Y)))", "q": "LA(LC(LS(Y)))", "kind": "key"}, {"t": "⌃⌥⇧D", "raw": "LA(LC(LS(U)))", "q": "LA(LC(LS(U)))", "kind": "key"}, {"t": "⌃⌥⇧L", "raw": "LA(LC(LS(I)))", "q": "LA(LC(LS(I)))", "kind": "key"}, {"t": "⌃⌥⇧'", "raw": "LA(LC(LS(O)))", "q": "LA(LC(LS(O)))", "kind": "key"}, {"t": "", "kind": "none", "raw": "&none"}, {"t": "F6", "raw": "F6", "q": "F6", "kind": "key"}, {"t": "F7", "raw": "F7", "q": "F7", "kind": "key"}, {"t": "F8", "raw": "F8", "q": "F8", "kind": "key"}, {"t": "F9", "raw": "F9", "q": "F9", "kind": "key"}, {"t": "F10", "raw": "F10", "q": "F10", "kind": "key"}, {"t": "⌃⌥⇧⌘P", "raw": "LA(LC(LS(LG(H))))", "q": "LA(LC(LS(LG(H))))", "kind": "key"}, {"t": "⌃⌥⇧←", "raw": "LA(LC(LS(LEFT)))", "q": "LA(LC(LS(LEFT)))", "kind": "key"}, {"t": "⌃⌥⇧↑", "raw": "LA(LC(LS(UP)))", "q": "LA(LC(LS(UP)))", "kind": "key"}, {"t": "⌃⌥⇧↓", "raw": "LA(LC(LS(DOWN)))", "q": "LA(LC(LS(DOWN)))", "kind": "key"}, {"t": "⌃⌥⇧→", "raw": "LA(LC(LS(RIGHT)))", "q": "LA(LC(LS(RIGHT)))", "kind": "key"}, {"t": "F3", "raw": "F3", "q": "F3", "kind": "key"}, {"t": "⌘.", "raw": "LG(C)", "q": "LG(C)", "name": "RAYCPNAME", "app": "Raycast", "kind": "key"}, {"t": "⇧⌘.", "raw": "LG(LS(C))", "q": "LG(LS(C))", "name": "RAYCPPHONE", "app": "Raycast", "kind": "key"}, {"t": "⇧⌘,", "raw": "LG(LS(G))", "q": "LG(LS(G))", "name": "RAYCPMAIL", "app": "Raycast", "kind": "key"}, {"t": "F11", "raw": "F11", "q": "F11", "kind": "key"}, {"t": "F12", "raw": "F12", "q": "F12", "kind": "key"}, {"t": "⌃⌥⇧G", "raw": "LA(LC(LS(N)))", "q": "LA(LC(LS(N)))", "kind": "key"}, {"t": "⌃⌘Q", "raw": "&hsr RSHFT LC(LG(OP_Q))", "q": "LC(LG(P))", "kind": "key", "hold": "⇧", "holdKind": "mod", "beh": "hsr", "holdName": "Shift"}, {"t": "⌃⌥⇧⌘C", "raw": "LA(LC(LS(LG(M))))", "q": "LA(LC(LS(LG(M))))", "kind": "key"}, {"t": "⌃⌥⇧H", "raw": "LA(LC(LS(DOT)))", "q": "LA(LC(LS(DOT)))", "kind": "key"}, {"t": "", "kind": "none", "raw": "&none"}, {"t": "⌘F12", "raw": "LG(F12)", "q": "LG(F12)", "kind": "key"}, {"t": "", "kind": "trans", "raw": "&trans"}, {"t": "", "kind": "trans", "raw": "&trans"}, {"t": "", "kind": "trans", "raw": "&trans"}, {"t": "⌃⌥⇧⌘←", "raw": "LG(LA(LC(LS(LEFT))))", "q": "LG(LA(LC(LS(LEFT))))", "kind": "key"}, {"t": "⌃⌥⇧⌘↓", "raw": "LG(LA(LC(LS(DOWN))))", "q": "LG(LA(LC(LS(DOWN))))", "kind": "key"}, {"t": "⌃⌥⇧⌘→", "raw": "LG(LA(LC(LS(RIGHT))))", "q": "LG(LA(LC(LS(RIGHT))))", "kind": "key"}]}, {"name": "MOUSE", "keys": [{"t": "", "kind": "none", "raw": "&none"}, {"t": "⌘←", "raw": "LG(LEFT)", "q": "LG(LEFT)", "kind": "key"}, {"t": "↑", "s": "souris", "kind": "mouse", "raw": "&mmv MOVE_UP"}, {"t": "⌘→", "raw": "LG(RIGHT)", "q": "LG(RIGHT)", "kind": "key"}, {"t": "⌃⌥⇧␣", "raw": "LA(LC(LS(SPACE)))", "q": "LA(LC(LS(SPACE)))", "kind": "key"}, {"t": "🔇", "raw": "C_MUTE", "q": "C_MUTE", "s": "Muet", "kind": "key"}, {"t": "🔉", "raw": "C_VOL_DN", "q": "C_VOL_DN", "s": "Vol −", "kind": "key"}, {"t": "🔊", "raw": "C_VOL_UP", "q": "C_VOL_UP", "s": "Vol +", "kind": "key"}, {"t": "⇧⌘M", "raw": "LG(LS(COMMA))", "q": "LG(LS(COMMA))", "name": "OUTLKFILEMAIL", "app": "Outlook", "kind": "key"}, {"t": "⇱", "raw": "HOME", "q": "HOME", "s": "Début", "kind": "key"}, {"t": "SLOW", "s": "maintien", "kind": "layer", "raw": "&mo SLOW"}, {"t": "←", "s": "souris", "kind": "mouse", "raw": "&mmv MOVE_LEFT"}, {"t": "↓", "s": "souris", "kind": "mouse", "raw": "&mmv MOVE_DOWN"}, {"t": "→", "s": "souris", "kind": "mouse", "raw": "&mmv MOVE_RIGHT"}, {"t": "", "kind": "none", "raw": "&none"}, {"t": "⇞", "raw": "PG_UP", "q": "PG_UP", "s": "Page ↑", "kind": "key"}, {"t": "Clic G", "kind": "mouse", "raw": "&mkp LCLK"}, {"t": "Clic D", "kind": "mouse", "raw": "&mkp RCLK"}, {"t": "⌃E", "raw": "LC(D)", "q": "LC(D)", "name": "OUTLKARCHMAIL", "app": "Outlook", "kind": "key"}, {"t": "⇲", "raw": "END", "q": "END", "s": "Fin", "kind": "key"}, {"t": "", "kind": "none", "raw": "&none"}, {"t": "", "kind": "none", "raw": "&none"}, {"t": "⌘0", "raw": "LG(N0)", "q": "LG(N0)", "kind": "key"}, {"t": "⌘-", "raw": "LG(MINUS)", "q": "LG(MINUS)", "kind": "key"}, {"t": "⌘+", "raw": "LG(EQUAL)", "q": "LG(EQUAL)", "kind": "key"}, {"t": "⌃⌘␣", "raw": "LC(LG(SPACE))", "q": "LC(LG(SPACE))", "name": "RAYEMOJI", "app": "Raycast", "kind": "key"}, {"t": "⇟", "raw": "PG_DN", "q": "PG_DN", "s": "Page ↓", "kind": "key"}, {"t": "→", "s": "défil.", "kind": "mouse", "raw": "&msc SCRL_RIGHT"}, {"t": "↓", "s": "défil.", "kind": "mouse", "raw": "&msc SCRL_DOWN"}, {"t": "↑", "s": "défil.", "kind": "mouse", "raw": "&msc SCRL_UP"}, {"t": "←", "s": "défil.", "kind": "mouse", "raw": "&msc SCRL_LEFT"}, {"t": "", "kind": "trans", "raw": "&trans"}, {"t": "", "kind": "trans", "raw": "&trans"}, {"t": "", "kind": "trans", "raw": "&trans"}, {"t": "", "kind": "trans", "raw": "&trans"}, {"t": "", "kind": "none", "raw": "&none"}, {"t": "", "kind": "trans", "raw": "&trans"}, {"t": "", "kind": "trans", "raw": "&trans"}]}, {"name": "MOUSE2", "keys": [{"t": "", "kind": "none", "raw": "&none"}, {"t": "", "kind": "none", "raw": "&none"}, {"t": "", "kind": "none", "raw": "&none"}, {"t": "", "kind": "none", "raw": "&none"}, {"t": "", "kind": "none", "raw": "&none"}, {"t": "", "kind": "none", "raw": "&none"}, {"t": "", "kind": "none", "raw": "&none"}, {"t": "", "kind": "none", "raw": "&none"}, {"t": "", "kind": "none", "raw": "&none"}, {"t": "", "kind": "none", "raw": "&none"}, {"t": "", "kind": "none", "raw": "&none"}, {"t": "", "kind": "none", "raw": "&none"}, {"t": "", "kind": "none", "raw": "&none"}, {"t": "", "kind": "none", "raw": "&none"}, {"t": "", "kind": "none", "raw": "&none"}, {"t": "", "kind": "none", "raw": "&none"}, {"t": "", "kind": "none", "raw": "&none"}, {"t": "", "kind": "none", "raw": "&none"}, {"t": "", "kind": "none", "raw": "&none"}, {"t": "", "kind": "none", "raw": "&none"}, {"t": "", "kind": "none", "raw": "&none"}, {"t": "", "kind": "trans", "raw": "&trans"}, {"t": "", "kind": "none", "raw": "&none"}, {"t": "Clic D", "kind": "mouse", "raw": "&mkp RCLK"}, {"t": "Clic G", "kind": "mouse", "raw": "&mkp LCLK"}, {"t": "ScrLk", "raw": "SCROLLLOCK", "q": "SCROLLLOCK", "kind": "key"}, {"t": "", "kind": "none", "raw": "&none"}, {"t": "", "kind": "none", "raw": "&none"}, {"t": "", "kind": "none", "raw": "&none"}, {"t": "", "kind": "none", "raw": "&none"}, {"t": "", "kind": "none", "raw": "&none"}, {"t": "", "kind": "trans", "raw": "&trans"}, {"t": "", "kind": "trans", "raw": "&trans"}, {"t": "", "kind": "trans", "raw": "&trans"}, {"t": "", "kind": "trans", "raw": "&trans"}, {"t": "", "kind": "none", "raw": "&none"}, {"t": "", "kind": "trans", "raw": "&trans"}, {"t": "", "kind": "trans", "raw": "&trans"}]}, {"name": "NUMBERS", "keys": [{"t": "« ", "raw": "N1", "q": "N1", "kind": "key"}, {"t": " »", "raw": "N2", "q": "N2", "kind": "key"}, {"t": "\"", "raw": "N3", "q": "N3", "kind": "key"}, {"t": "-", "raw": "N4", "q": "N4", "kind": "key"}, {"t": "+", "raw": "N5", "q": "N5", "kind": "key"}, {"t": "*", "raw": "N6", "q": "N6", "kind": "key"}, {"t": "/", "raw": "N7", "q": "N7", "kind": "key"}, {"t": "=", "raw": "N8", "q": "N8", "kind": "key"}, {"t": "(", "raw": "N9", "q": "N9", "kind": "key"}, {"t": ")", "raw": "N0", "q": "N0", "kind": "key"}, {"t": "1", "raw": "&hll ARROW KP_N1", "q": "KP_N1", "s": "pavé", "kind": "key", "hold": "ARROW", "holdKind": "layer", "beh": "hll"}, {"t": "2", "raw": "&hml LCTRL KP_N2", "q": "KP_N2", "s": "pavé", "kind": "key", "hold": "⌃", "holdKind": "mod", "beh": "hml", "holdName": "Ctrl"}, {"t": "3", "raw": "&hml LALT KP_N3", "q": "KP_N3", "s": "pavé", "kind": "key", "hold": "⌥", "holdKind": "mod", "beh": "hml", "holdName": "Option"}, {"t": "4", "raw": "&hml LGUI KP_N4", "q": "KP_N4", "s": "pavé", "kind": "key", "hold": "⌘", "holdKind": "mod", "beh": "hml", "holdName": "Cmd"}, {"t": "5", "raw": "KP_N5", "q": "KP_N5", "s": "pavé", "kind": "key"}, {"t": "6", "raw": "KP_N6", "q": "KP_N6", "s": "pavé", "kind": "key"}, {"t": "7", "raw": "&hmr RGUI KP_N7", "q": "KP_N7", "s": "pavé", "kind": "key", "hold": "⌘", "holdKind": "mod", "beh": "hmr", "holdName": "Cmd"}, {"t": "8", "raw": "&hmr RALT KP_N8", "q": "KP_N8", "s": "pavé", "kind": "key", "hold": "⌥", "holdKind": "mod", "beh": "hmr", "holdName": "Option"}, {"t": "9", "raw": "&hmr RCTRL KP_N9", "q": "KP_N9", "s": "pavé", "kind": "key", "hold": "⌃", "holdKind": "mod", "beh": "hmr", "holdName": "Ctrl"}, {"t": "0", "raw": "KP_N0", "q": "KP_N0", "s": "pavé", "kind": "key"}, {"t": "F3", "raw": "F3", "q": "F3", "kind": "key"}, {"t": "k", "raw": "NON_US_BACKSLASH", "q": "NON_US_BACKSLASH", "kind": "key"}, {"t": ";", "raw": "LS(G)", "q": "LS(G)", "kind": "key"}, {"t": ":", "raw": "LS(C)", "q": "LS(C)", "kind": "key"}, {"t": "", "kind": "trans", "raw": "&trans"}, {"t": "⇪", "raw": "CAPS", "q": "CAPS", "s": "Verr. maj", "kind": "key"}, {"t": ",", "raw": "G", "q": "G", "kind": "key"}, {"t": "%", "raw": "&hsr RSHFT LS(OP_HASH)", "q": "LS(EQUAL)", "kind": "key", "hold": "⇧", "holdKind": "mod", "beh": "hsr", "holdName": "Shift"}, {"t": "", "kind": "trans", "raw": "&trans"}, {"t": "", "kind": "trans", "raw": "&trans"}, {"t": "", "kind": "none", "raw": "&none"}, {"t": "@", "raw": "MINUS", "q": "MINUS", "kind": "key"}, {"t": "⌥", "raw": "RALT", "q": "RALT", "s": "Option", "kind": "key"}, {"t": "⇥", "raw": "&hsl LSHFT TAB", "q": "TAB", "s": "Tab", "kind": "key", "hold": "⇧", "holdKind": "mod", "beh": "hsl", "holdName": "Shift"}, {"t": "␣", "raw": "&mt LGUI SPACE", "q": "SPACE", "s": "espace", "kind": "key", "hold": "⌘", "holdKind": "mod", "beh": "mt", "holdName": "Cmd"}, {"t": "", "kind": "trans", "raw": "&trans"}, {"t": "⌥", "raw": "RALT", "q": "RALT", "s": "Option", "kind": "key"}, {"t": "→ OPTIM", "kind": "layer", "raw": "&to 0"}]}, {"name": "KEYPAD", "keys": [{"t": "=", "raw": "KP_EQUAL", "q": "KP_EQUAL", "s": "pavé", "kind": "key"}, {"t": "9", "raw": "KP_N9", "q": "KP_N9", "s": "pavé", "kind": "key"}, {"t": "8", "raw": "KP_N8", "q": "KP_N8", "s": "pavé", "kind": "key"}, {"t": "7", "raw": "KP_N7", "q": "KP_N7", "s": "pavé", "kind": "key"}, {"t": "+", "raw": "KP_PLUS", "q": "KP_PLUS", "s": "pavé", "kind": "key"}, {"t": "*", "raw": "N6", "q": "N6", "kind": "key"}, {"t": "/", "raw": "N7", "q": "N7", "kind": "key"}, {"t": "=", "raw": "N8", "q": "N8", "kind": "key"}, {"t": "(", "raw": "N9", "q": "N9", "kind": "key"}, {"t": ")", "raw": "N0", "q": "N0", "kind": "key"}, {"t": "0", "raw": "&hll SYMBOL KP_N0", "q": "KP_N0", "s": "pavé", "kind": "key", "hold": "SYMBOL", "holdKind": "layer", "beh": "hll"}, {"t": "6", "raw": "&hml LCTRL KP_N6", "q": "KP_N6", "s": "pavé", "kind": "key", "hold": "⌃", "holdKind": "mod", "beh": "hml", "holdName": "Ctrl"}, {"t": "5", "raw": "&hml LALT KP_N5", "q": "KP_N5", "s": "pavé", "kind": "key", "hold": "⌥", "holdKind": "mod", "beh": "hml", "holdName": "Option"}, {"t": "4", "raw": "&hml LGUI KP_N4", "q": "KP_N4", "s": "pavé", "kind": "key", "hold": "⌘", "holdKind": "mod", "beh": "hml", "holdName": "Cmd"}, {"t": "−", "raw": "KP_MINUS", "q": "KP_MINUS", "s": "pavé", "kind": "key"}, {"t": "« ", "raw": "N1", "q": "N1", "kind": "key"}, {"t": " »", "raw": "N2", "q": "N2", "kind": "key"}, {"t": "\"", "raw": "N3", "q": "N3", "kind": "key"}, {"t": "-", "raw": "N4", "q": "N4", "kind": "key"}, {"t": "+", "raw": "N5", "q": "N5", "kind": "key"}, {"t": "Num", "raw": "KP_NUMLOCK", "q": "KP_NUMLOCK", "kind": "key"}, {"t": "÷", "raw": "KP_SLASH", "q": "KP_SLASH", "s": "pavé", "kind": "key"}, {"t": "3", "raw": "KP_N3", "q": "KP_N3", "s": "pavé", "kind": "key"}, {"t": "2", "raw": "KP_N2", "q": "KP_N2", "s": "pavé", "kind": "key"}, {"t": "1", "raw": "KP_N1", "q": "KP_N1", "s": "pavé", "kind": "key"}, {"t": "×", "raw": "KP_MULTIPLY", "q": "KP_MULTIPLY", "s": "pavé", "kind": "key"}, {"t": "@", "raw": "MINUS", "q": "MINUS", "kind": "key"}, {"t": "#", "raw": "EQUAL", "q": "EQUAL", "kind": "key"}, {"t": "", "kind": "none", "raw": "&none"}, {"t": "", "kind": "none", "raw": "&none"}, {"t": "", "kind": "none", "raw": "&none"}, {"t": "⌫", "raw": "BSPC", "q": "BSPC", "s": "Retour arr.", "kind": "key"}, {"t": ".", "raw": "KP_DOT", "q": "KP_DOT", "s": "pavé", "kind": "key"}, {"t": ",", "raw": "&hsl LSHFT KP_COMMA", "q": "KP_COMMA", "s": "pavé", "kind": "key", "hold": "⇧", "holdKind": "mod", "beh": "hsl", "holdName": "Shift"}, {"t": "␣", "raw": "&mt LGUI SPACE", "q": "SPACE", "s": "espace", "kind": "key", "hold": "⌘", "holdKind": "mod", "beh": "mt", "holdName": "Cmd"}, {"t": "", "kind": "none", "raw": "&none"}, {"t": "", "kind": "none", "raw": "&none"}, {"t": "→ OPTIM", "kind": "layer", "raw": "&to 0"}]}, {"name": "SYMBOL", "keys": [{"t": "", "kind": "none", "raw": "&none"}, {"t": "", "kind": "none", "raw": "&none"}, {"t": "[", "raw": "LA(N9)", "q": "LA(N9)", "kind": "key"}, {"t": "]", "raw": "LA(N0)", "q": "LA(N0)", "kind": "key"}, {"t": "h", "raw": "DOT", "q": "DOT", "kind": "key"}, {"t": "", "kind": "none", "raw": "&none"}, {"t": "", "kind": "none", "raw": "&none"}, {"t": "", "kind": "none", "raw": "&none"}, {"t": "", "kind": "none", "raw": "&none"}, {"t": "", "kind": "none", "raw": "&none"}, {"t": "", "kind": "trans", "raw": "&trans"}, {"t": "", "kind": "none", "raw": "&none"}, {"t": "(", "raw": "N9", "q": "N9", "kind": "key"}, {"t": ")", "raw": "N0", "q": "N0", "kind": "key"}, {"t": "j", "raw": "W", "q": "W", "kind": "key"}, {"t": "", "kind": "none", "raw": "&none"}, {"t": "", "kind": "none", "raw": "&none"}, {"t": "", "kind": "none", "raw": "&none"}, {"t": "", "kind": "none", "raw": "&none"}, {"t": "", "kind": "none", "raw": "&none"}, {"t": "", "kind": "none", "raw": "&none"}, {"t": "", "kind": "none", "raw": "&none"}, {"t": "", "kind": "none", "raw": "&none"}, {"t": "{", "raw": "LA(U)", "q": "LA(U)", "kind": "key"}, {"t": "}", "raw": "LA(I)", "q": "LA(I)", "kind": "key"}, {"t": "m", "raw": "COMMA", "q": "COMMA", "kind": "key"}, {"t": "", "kind": "none", "raw": "&none"}, {"t": "", "kind": "none", "raw": "&none"}, {"t": "", "kind": "none", "raw": "&none"}, {"t": "", "kind": "none", "raw": "&none"}, {"t": "", "kind": "none", "raw": "&none"}, {"t": "", "kind": "none", "raw": "&none"}, {"t": "", "kind": "none", "raw": "&none"}, {"t": "", "kind": "none", "raw": "&none"}, {"t": "␣", "raw": "&mt LGUI SPACE", "q": "SPACE", "s": "espace", "kind": "key", "hold": "⌘", "holdKind": "mod", "beh": "mt", "holdName": "Cmd"}, {"t": "", "kind": "none", "raw": "&none"}, {"t": "", "kind": "none", "raw": "&none"}, {"t": "→ OPTIM", "kind": "layer", "raw": "&to 0"}]}, {"name": "ARROW", "keys": [{"t": "→ OPTIM", "kind": "layer", "raw": "&to 0"}, {"t": "⌃⇧␣", "raw": "LC(LS(SPACE))", "q": "LC(LS(SPACE))", "kind": "key"}, {"t": "⌃⌥O", "raw": "LC(LA(E))", "q": "LC(LA(E))", "kind": "key"}, {"t": "⌃⌥C", "raw": "LC(LA(M))", "q": "LC(LA(M))", "kind": "key"}, {"t": "⌫", "raw": "BSPC", "q": "BSPC", "s": "Retour arr.", "kind": "key"}, {"t": "⌥⇧⌘8", "raw": "LS(LA(LG(N8)))", "q": "LS(LA(LG(N8)))", "name": "RAYSRCHAPPMENU", "app": "Raycast", "kind": "key"}, {"t": "⌫", "raw": "BSPC", "q": "BSPC", "s": "Retour arr.", "kind": "key"}, {"t": "⌥⌫", "raw": "LA(BSPC)", "q": "LA(BSPC)", "s": "Retour arr.", "kind": "key"}, {"t": "⌘⌫", "raw": "LG(BSPC)", "q": "LG(BSPC)", "s": "Retour arr.", "kind": "key"}, {"t": "", "kind": "none", "raw": "&none"}, {"t": "", "kind": "trans", "raw": "&trans"}, {"t": "⌃", "raw": "LCTRL", "q": "LCTRL", "s": "Ctrl", "kind": "key"}, {"t": "⌥", "raw": "LALT", "q": "LALT", "s": "Option", "kind": "key"}, {"t": "⌘", "raw": "LGUI", "q": "LGUI", "s": "Cmd", "kind": "key"}, {"t": "⌥⇧⌘P", "raw": "LS(LA(LG(H)))", "q": "LS(LA(LG(H)))", "name": "ONEPWDQUICK", "app": "1Password", "kind": "key"}, {"t": "↵", "raw": "RET", "q": "RET", "s": "Entrée", "kind": "key"}, {"t": "←", "raw": "LEFT", "q": "LEFT", "kind": "key"}, {"t": "↑", "raw": "UP", "q": "UP", "kind": "key"}, {"t": "↓", "raw": "DOWN", "q": "DOWN", "kind": "key"}, {"t": "→", "raw": "RIGHT", "q": "RIGHT", "kind": "key"}, {"t": "Boot", "s": "bootloader", "kind": "system", "raw": "&bootloader"}, {"t": "", "kind": "none", "raw": "&none"}, {"t": "⌃←", "raw": "LC(LEFT)", "q": "LC(LEFT)", "kind": "key"}, {"t": "⌃→", "raw": "LC(RIGHT)", "q": "LC(RIGHT)", "kind": "key"}, {"t": "spacecolon", "s": "macro", "kind": "macro", "macro": "spacecolon", "raw": "&spacecolon"}, {"t": "⇧F3", "raw": "LS(F3)", "q": "LS(F3)", "name": "CASECYCLE", "app": "MS Office", "kind": "key"}, {"t": "€", "raw": "LS(GRAVE)", "q": "LS(GRAVE)", "kind": "key"}, {"t": "ç", "raw": "BSLH", "q": "BSLH", "kind": "key"}, {"t": "$", "raw": "GRAVE", "q": "GRAVE", "kind": "key"}, {"t": "⌥⇧⌘F", "raw": "RG(LS(LA(Y)))", "q": "RG(LS(LA(Y)))", "name": "TEXTEXSEARCH", "app": "TextExpander", "kind": "key"}, {"t": "⌃⌥⇧⌘T", "raw": "RC(RA(LS(RG(J))))", "q": "RC(RA(LS(RG(J))))", "name": "TEXTEXOFF", "app": "TextExpander", "kind": "key"}, {"t": "⌫", "raw": "BSPC", "q": "BSPC", "s": "Retour arr.", "kind": "key"}, {"t": "⎋", "raw": "ESC", "q": "ESC", "s": "Échap", "kind": "key"}, {"t": "", "kind": "trans", "raw": "&trans"}, {"t": "", "kind": "trans", "raw": "&trans"}, {"t": "", "kind": "trans", "raw": "&trans"}, {"t": "", "kind": "trans", "raw": "&trans"}, {"t": "", "kind": "trans", "raw": "&trans"}]}, {"name": "SCREEN", "keys": [{"t": "BT 0", "s": "bluetooth", "kind": "system", "raw": "&bt BT_SEL 0"}, {"t": "BT 1", "s": "bluetooth", "kind": "system", "raw": "&bt BT_SEL 1"}, {"t": "BT 2", "s": "bluetooth", "kind": "system", "raw": "&bt BT_SEL 2"}, {"t": "BT 3", "s": "bluetooth", "kind": "system", "raw": "&bt BT_SEL 3"}, {"t": "BT 4", "s": "bluetooth", "kind": "system", "raw": "&bt BT_SEL 4"}, {"t": "⌃⇧'", "raw": "LC(LS(O))", "q": "LC(LS(O))", "kind": "key"}, {"t": "⏮", "raw": "C_PREV", "q": "C_PREV", "s": "Préc.", "kind": "key"}, {"t": "⏯", "raw": "C_PP", "q": "C_PP", "s": "Lecture", "kind": "key"}, {"t": "⏭", "raw": "C_NEXT", "q": "C_NEXT", "s": "Suiv.", "kind": "key"}, {"t": "", "kind": "trans", "raw": "&trans"}, {"t": "", "kind": "none", "raw": "&none"}, {"t": "", "kind": "none", "raw": "&none"}, {"t": "", "kind": "none", "raw": "&none"}, {"t": "", "kind": "none", "raw": "&none"}, {"t": "", "kind": "none", "raw": "&none"}, {"t": "⌃⇧I", "raw": "LC(LS(S))", "q": "LC(LS(S))", "kind": "key"}, {"t": "⌃⇧⌘4", "raw": "LG(LC(LS(N4)))", "q": "LG(LC(LS(N4)))", "kind": "key"}, {"t": "⇧⌘4", "raw": "LG(LS(N4))", "q": "LG(LS(N4))", "kind": "key"}, {"t": "⌃⇧⌘3", "raw": "LG(LC(LS(N3)))", "q": "LG(LC(LS(N3)))", "kind": "key"}, {"t": "⇧⌘3", "raw": "LG(LS(N3))", "q": "LG(LS(N3))", "kind": "key"}, {"t": "BT ✕", "s": "", "kind": "system", "raw": "&bt BT_CLR"}, {"t": "", "kind": "none", "raw": "&none"}, {"t": "", "kind": "none", "raw": "&none"}, {"t": "", "kind": "none", "raw": "&none"}, {"t": "", "kind": "none", "raw": "&none"}, {"t": "", "kind": "trans", "raw": "&trans"}, {"t": "⇧⌘M", "raw": "LG(LS(COMMA))", "q": "LG(LS(COMMA))", "kind": "key"}, {"t": "⇧⌘9", "raw": "LG(LS(N9))", "q": "LG(LS(N9))", "kind": "key"}, {"t": "⇧⌘↑", "raw": "RG(RS(UP))", "q": "RG(RS(UP))", "kind": "key"}, {"t": "⇧⌘↓", "raw": "RG(RS(DOWN))", "q": "RG(RS(DOWN))", "kind": "key"}, {"t": "⇧⌘0", "raw": "LG(LS(N0))", "q": "LG(LS(N0))", "kind": "key"}, {"t": "", "kind": "trans", "raw": "&trans"}, {"t": "", "kind": "none", "raw": "&none"}, {"t": "", "kind": "none", "raw": "&none"}, {"t": "", "kind": "none", "raw": "&none"}, {"t": "␣", "raw": "SPACE", "q": "SPACE", "s": "espace", "kind": "key"}, {"t": "⌘,", "raw": "LG(G)", "q": "LG(G)", "kind": "key"}, {"t": "⌘.", "raw": "LG(C)", "q": "LG(C)", "kind": "key"}]}, {"name": "SLOW", "keys": [{"t": "", "kind": "trans", "raw": "&trans"}, {"t": "", "kind": "trans", "raw": "&trans"}, {"t": "", "kind": "trans", "raw": "&trans"}, {"t": "", "kind": "trans", "raw": "&trans"}, {"t": "", "kind": "trans", "raw": "&trans"}, {"t": "", "kind": "trans", "raw": "&trans"}, {"t": "", "kind": "trans", "raw": "&trans"}, {"t": "", "kind": "trans", "raw": "&trans"}, {"t": "", "kind": "trans", "raw": "&trans"}, {"t": "", "kind": "trans", "raw": "&trans"}, {"t": "", "kind": "trans", "raw": "&trans"}, {"t": "", "kind": "trans", "raw": "&trans"}, {"t": "", "kind": "trans", "raw": "&trans"}, {"t": "", "kind": "trans", "raw": "&trans"}, {"t": "", "kind": "trans", "raw": "&trans"}, {"t": "", "kind": "trans", "raw": "&trans"}, {"t": "", "kind": "trans", "raw": "&trans"}, {"t": "", "kind": "trans", "raw": "&trans"}, {"t": "", "kind": "trans", "raw": "&trans"}, {"t": "", "kind": "trans", "raw": "&trans"}, {"t": "", "kind": "trans", "raw": "&trans"}, {"t": "", "kind": "trans", "raw": "&trans"}, {"t": "", "kind": "trans", "raw": "&trans"}, {"t": "", "kind": "trans", "raw": "&trans"}, {"t": "", "kind": "trans", "raw": "&trans"}, {"t": "", "kind": "trans", "raw": "&trans"}, {"t": "", "kind": "trans", "raw": "&trans"}, {"t": "", "kind": "trans", "raw": "&trans"}, {"t": "", "kind": "trans", "raw": "&trans"}, {"t": "", "kind": "trans", "raw": "&trans"}, {"t": "", "kind": "trans", "raw": "&trans"}, {"t": "", "kind": "trans", "raw": "&trans"}, {"t": "", "kind": "trans", "raw": "&trans"}, {"t": "", "kind": "trans", "raw": "&trans"}, {"t": "", "kind": "trans", "raw": "&trans"}, {"t": "", "kind": "trans", "raw": "&trans"}, {"t": "", "kind": "trans", "raw": "&trans"}, {"t": "", "kind": "trans", "raw": "&trans"}]}], "combos": [{"id": "ret", "binding": "&kp RET", "keys": [15, 26], "layers": [0, 7, 5, 6, 4, 2], "layer_tokens": ["OPTIM", "ARROW", "KEYPAD", "SYMBOL", "NUMBERS", "MOUSE"], "term": 150, "idle": 0, "section": "Spacing combos", "comment": "2026-10-28 : require-prior-idle-ms 20 -> 0 (le combo ne doit plus être désactivé par une frappe récente). Historique : require-prior-idle-ms to 0 instead of 80, & TERM to 150, to try and prevent accidental input of \"pg\" instead of sending \"Return\" 22/11/2024 term set to 50 to see if better \"return activation occurs\"...26/11/2024 seemed better with 150 - reverted", "out": {"t": "↵", "raw": "RET", "q": "RET", "s": "Entrée", "kind": "key"}}, {"id": "ret2", "binding": "&kp RET", "keys": [13, 24], "layers": [0, 7, 5, 6, 4, 2], "layer_tokens": ["OPTIM", "ARROW", "KEYPAD", "SYMBOL", "NUMBERS", "MOUSE"], "term": 150, "idle": 100, "section": "Spacing combos", "comment": "", "out": {"t": "↵", "raw": "RET", "q": "RET", "s": "Entrée", "kind": "key"}}, {"id": "del", "binding": "&kp DEL", "keys": [5, 15], "layers": [0, 5, 6, 4, 2], "layer_tokens": ["OPTIM", "KEYPAD", "SYMBOL", "NUMBERS", "MOUSE"], "term": 50, "idle": 100, "section": "Spacing combos", "comment": "", "out": {"t": "⌦", "raw": "DEL", "q": "DEL", "s": "Suppr", "kind": "key"}}, {"id": "bspc", "binding": "&kp BSPC", "keys": [6, 16], "layers": [0, 7, 5, 6, 4], "layer_tokens": ["OPTIM", "ARROW", "KEYPAD", "SYMBOL", "NUMBERS"], "term": 40, "idle": 0, "section": "Spacing combos", "comment": "require-prior-idle-ms disabled with -1, I want it to trigger no matter what. Time-out to 250 in order to get a more permissive trigger of the combo.", "out": {"t": "⌫", "raw": "BSPC", "q": "BSPC", "s": "Retour arr.", "kind": "key"}}, {"id": "bspcword", "binding": "&kp LA(BSPC)", "keys": [7, 17], "layers": [0, 7, 5, 6, 4, 2], "layer_tokens": ["OPTIM", "ARROW", "KEYPAD", "SYMBOL", "NUMBERS", "MOUSE"], "term": 30, "idle": 80, "section": "Spacing combos", "comment": "require-prior-idle-ms to 80 instead of 100, to ease usage while typing. Trying to make it more of a comittment with 30 timout-ms (term)", "out": {"t": "⌥⌫", "raw": "LA(BSPC)", "q": "LA(BSPC)", "s": "Retour arr.", "kind": "key"}}, {"id": "stab", "binding": "&kp LS(TAB)", "keys": [15, 16], "layers": [0, 5, 6, 4], "layer_tokens": ["OPTIM", "KEYPAD", "SYMBOL", "NUMBERS"], "term": 50, "idle": 100, "section": "Spacing combos", "comment": "", "out": {"t": "⇧⇥", "raw": "LS(TAB)", "q": "LS(TAB)", "s": "Tab", "kind": "key"}}, {"id": "op_cced", "binding": "&kp OP_CCED", "keys": [16, 27], "layers": [0, 7, 4], "layer_tokens": ["OPTIM", "ARROW", "NUMBERS"], "term": 50, "idle": 50, "section": "Letters combos", "comment": "timeout-ms to 50 instead of 70, and require-prior-idle-ms to 50 instead of 100 to see if it works better during typing tests.", "out": {"t": "ç", "raw": "BSLH", "q": "BSLH", "kind": "key"}}, {"id": "op_cir", "binding": "&kp OP_CIR", "keys": [17, 28], "layers": [0, 4], "layer_tokens": ["OPTIM", "NUMBERS"], "term": 50, "idle": 50, "section": "Characters combo", "comment": "require-prior-idle-ms to 50 instead of 100 to see if it works better during typing tests.", "out": {"t": "ˆ", "raw": "SQT", "q": "SQT", "s": "morte", "dead": true, "kind": "key"}}, {"id": "op_hash", "binding": "&kp OP_HASH", "keys": [27, 28], "layers": [0, 7, 4], "layer_tokens": ["OPTIM", "ARROW", "NUMBERS"], "term": 50, "idle": 100, "section": "Characters combo", "comment": "", "out": {"t": "#", "raw": "EQUAL", "q": "EQUAL", "kind": "key"}}, {"id": "op_at", "binding": "&kp OP_AT", "keys": [28, 29], "layers": [0, 7, 4], "layer_tokens": ["OPTIM", "ARROW", "NUMBERS"], "term": 50, "idle": 100, "section": "Characters combo", "comment": "", "out": {"t": "@", "raw": "MINUS", "q": "MINUS", "kind": "key"}}, {"id": "op_unds", "binding": "&kp OP_UNDS", "keys": [26, 27], "layers": [0, 7, 4], "layer_tokens": ["OPTIM", "ARROW", "NUMBERS"], "term": 50, "idle": 100, "section": "Characters combo", "comment": "", "out": {"t": "_", "raw": "LS(MINUS)", "q": "LS(MINUS)", "kind": "key"}}, {"id": "op_min", "binding": "&kp OP_MIN", "keys": [23, 24], "layers": [0, 7, 4], "layer_tokens": ["OPTIM", "ARROW", "NUMBERS"], "term": 50, "idle": 100, "section": "Characters combo", "comment": "", "out": {"t": "-", "raw": "N4", "q": "N4", "kind": "key"}}, {"id": "op_plus", "binding": "&kp OP_PLUS", "keys": [22, 23], "layers": [0, 7, 4], "layer_tokens": ["OPTIM", "ARROW", "NUMBERS"], "term": 50, "idle": 100, "section": "Characters combo", "comment": "", "out": {"t": "+", "raw": "N5", "q": "N5", "kind": "key"}}, {"id": "lay-arrow", "binding": "&tog ARROW", "keys": [1, 2, 3], "layers": [0, 7], "layer_tokens": ["OPTIM", "ARROW"], "term": 50, "idle": 100, "section": "Layers combos", "comment": "", "out": {"t": "⇄ ARROW", "kind": "layer", "raw": "&tog ARROW", "target": "ARROW"}}, {"id": "lay-number", "binding": "&tog NUMBERS", "keys": [6, 7, 8], "layers": [0, 7, 4], "layer_tokens": ["OPTIM", "ARROW", "NUMBERS"], "term": 50, "idle": 100, "section": "Layers combos", "comment": "", "out": {"t": "⇄ NUMBERS", "kind": "layer", "raw": "&tog NUMBERS", "target": "NUMBERS"}}, {"id": "to-0-fromkeypad", "binding": "&to 0", "keys": [1, 2, 3], "layers": [5], "layer_tokens": ["KEYPAD"], "term": 50, "idle": 100, "section": "Layers combos", "comment": "", "out": {"t": "→ OPTIM", "kind": "layer", "raw": "&to 0", "target": "OPTIM"}}, {"id": "to-keypad", "binding": "&to KEYPAD", "keys": [35, 37], "layers": [0], "layer_tokens": ["OPTIM"], "term": 50, "idle": 100, "section": "Layers combos", "comment": "", "out": {"t": "→ KEYPAD", "kind": "layer", "raw": "&to KEYPAD", "target": "KEYPAD"}}, {"id": "op-cut", "binding": "&kp LG(LBKT)", "keys": [1, 11], "layers": [0, 4, 5, 6, 2], "layer_tokens": ["OPTIM", "NUMBERS", "KEYPAD", "SYMBOL", "MOUSE"], "term": 50, "idle": 100, "section": "Editing combos", "comment": "", "out": {"t": "⌘X", "raw": "LG(LBKT)", "q": "LG(LBKT)", "kind": "key"}}, {"id": "op-copy", "binding": "&kp LG(M)", "keys": [2, 12], "layers": [0, 4, 5, 6, 2], "layer_tokens": ["OPTIM", "NUMBERS", "KEYPAD", "SYMBOL", "MOUSE"], "term": 50, "idle": 100, "section": "Editing combos", "comment": "", "out": {"t": "⌘C", "raw": "LG(M)", "q": "LG(M)", "kind": "key"}}, {"id": "op-paste", "binding": "&kp LG(FSLH)", "keys": [3, 13], "layers": [0, 4, 5, 6, 2], "layer_tokens": ["OPTIM", "NUMBERS", "KEYPAD", "SYMBOL", "MOUSE"], "term": 50, "idle": 100, "section": "Editing combos", "comment": "", "out": {"t": "⌘V", "raw": "LG(FSLH)", "q": "LG(FSLH)", "kind": "key"}}, {"id": "op-pasttxt", "binding": "&kp LG(LA(LS(FSLH)))", "keys": [4, 14], "layers": [0, 4, 5, 6, 2], "layer_tokens": ["OPTIM", "NUMBERS", "KEYPAD", "SYMBOL", "MOUSE"], "term": 50, "idle": 100, "section": "Editing combos", "comment": "paste without formatting", "out": {"t": "⌥⇧⌘V", "raw": "LG(LA(LS(FSLH)))", "q": "LG(LA(LS(FSLH)))", "kind": "key"}}, {"id": "op-undo", "binding": "&kp LG(OP_Z)", "keys": [14, 25], "layers": [0, 4, 5, 6, 2], "layer_tokens": ["OPTIM", "NUMBERS", "KEYPAD", "SYMBOL", "MOUSE"], "term": 50, "idle": 100, "section": "Editing combos", "comment": "", "out": {"t": "⌘Z", "raw": "LG(RBKT)", "q": "LG(RBKT)", "kind": "key"}}, {"id": "op-redo", "binding": "&kp LG(LS(OP_Z))", "keys": [12, 23], "layers": [0, 4, 5, 6, 2], "layer_tokens": ["OPTIM", "NUMBERS", "KEYPAD", "SYMBOL", "MOUSE"], "term": 50, "idle": 100, "section": "Editing combos", "comment": "", "out": {"t": "⇧⌘Z", "raw": "LG(LS(RBKT))", "q": "LG(LS(RBKT))", "kind": "key"}}, {"id": "appwindows", "binding": "&win_list", "keys": [24, 25], "layers": [0, 4, 5, 6, 2], "layer_tokens": ["OPTIM", "NUMBERS", "KEYPAD", "SYMBOL", "MOUSE"], "term": 50, "idle": 100, "section": "Application switching combos", "comment": "old macro pointed to : &kp LG(OP_DLR), doing a test with combo, behavior is next/prev window from active app, holding allow selecting between the current app's windows, with arrow keys on right homerow.", "out": {"t": "win list", "s": "macro", "kind": "macro", "macro": "win_list", "raw": "&win_list"}}, {"id": "applisthold", "binding": "&apps_list", "keys": [13, 14], "layers": [0, 4, 5, 6, 2], "layer_tokens": ["OPTIM", "NUMBERS", "KEYPAD", "SYMBOL", "MOUSE"], "term": 50, "idle": 100, "section": "Application switching combos", "comment": "old macro pointed to : &kp LG(TAB), now tapping does the same, holding allows to change app with arrow keys on right homerow.", "out": {"t": "apps list", "s": "macro", "kind": "macro", "macro": "apps_list", "raw": "&apps_list"}}, {"id": "applist", "binding": "&kp RC(SPACE)", "keys": [3, 4], "layers": [0, 4, 5, 6, 2], "layer_tokens": ["OPTIM", "NUMBERS", "KEYPAD", "SYMBOL", "MOUSE"], "term": 50, "idle": 100, "section": "Application switching combos", "comment": "", "out": {"t": "⌃␣", "raw": "RC(SPACE)", "q": "RC(SPACE)", "kind": "key"}}, {"id": "omnipl-identr2", "binding": "&kp LG(LS(N0))", "keys": [13, 14], "layers": [7], "layer_tokens": ["ARROW"], "term": 50, "idle": 100, "section": "OmniPlan", "comment": "Also works for workflowy WkfyNext", "out": {"t": "⇧⌘0", "raw": "LG(LS(N0))", "q": "LG(LS(N0))", "kind": "key"}}, {"id": "omnipl-identl2", "binding": "&kp LG(LS(N9))", "keys": [15, 16], "layers": [7], "layer_tokens": ["ARROW"], "term": 50, "idle": 100, "section": "OmniPlan", "comment": "Also works for workflowy WkfyPrev", "out": {"t": "⇧⌘9", "raw": "LG(LS(N9))", "q": "LG(LS(N9))", "kind": "key"}}, {"id": "esc", "binding": "&kp ESC", "keys": [22, 23, 24], "layers": [0, 1, 2, 4, 5, 6, 7], "layer_tokens": ["0", "1", "2", "4", "5", "6", "7"], "term": 50, "idle": 0, "section": "Escape combos", "comment": "require-prior-idle-ms to 0 instead of 100, to see if it works better. Sometimes I feel it's difficult to escage several times in a row.", "out": {"t": "⎋", "raw": "ESC", "q": "ESC", "s": "Échap", "kind": "key"}}, {"id": "bootloader", "binding": "&bootloader", "keys": [35, 37], "layers": [2], "layer_tokens": ["MOUSE"], "term": 50, "idle": 100, "section": "System combos", "comment": "hoping locality is kept... 2025-02-20 : not working, to troubleshoot.", "out": {"t": "Boot", "s": "bootloader", "kind": "system", "raw": "&bootloader"}}], "macros": [{"id": "q_minuscule", "label": "ZM_q_minuscul", "steps": [{"verb": "tape", "t": "⇪", "raw": "CAPS", "q": "CAPS", "s": "verr. maj activé", "kind": "key"}, {"verb": "presse", "t": "⇧", "raw": "LSHFT", "q": "LSHFT", "s": "Shift", "kind": "key"}, {"verb": "tape", "t": "q", "raw": "LS(P)", "q": "LS(P)", "kind": "key", "eff": true}, {"verb": "relâche", "t": "⇧", "raw": "LSHFT", "q": "LSHFT", "s": "Shift", "kind": "key"}, {"verb": "tape", "t": "⇪", "raw": "CAPS", "q": "CAPS", "s": "verr. maj désactivé", "kind": "key"}]}, {"id": "q_maj", "label": "ZM_q_maj", "steps": [{"verb": "tape", "t": "⇪", "raw": "CAPS", "q": "CAPS", "s": "verr. maj activé", "kind": "key"}, {"verb": "tape", "t": "Q", "raw": "P", "q": "P", "kind": "key", "eff": true}, {"verb": "tape", "t": "⇪", "raw": "CAPS", "q": "CAPS", "s": "verr. maj désactivé", "kind": "key"}]}, {"id": "win_list", "label": "Current App Window list in Contexts App", "steps": [{"verb": "presse", "t": "ARROW", "s": "maintien", "kind": "layer", "raw": "&mo ARROW"}, {"verb": "presse", "t": "⌘", "raw": "LGUI", "q": "LGUI", "s": "Cmd", "kind": "key"}, {"verb": "tape", "t": "⌘'", "raw": "LG(O)", "q": "LG(O)", "kind": "key", "eff": true}, {"verb": "attend", "t": "le relâchement", "kind": "note", "raw": "&macro_pause_for_release"}, {"verb": "relâche", "t": "ARROW", "s": "maintien", "kind": "layer", "raw": "&mo ARROW"}, {"verb": "relâche", "t": "⌘", "raw": "LGUI", "q": "LGUI", "s": "Cmd", "kind": "key"}]}, {"id": "apps_list", "label": "All Apps Window list in Contexts App", "steps": [{"verb": "presse", "t": "ARROW", "s": "maintien", "kind": "layer", "raw": "&mo ARROW"}, {"verb": "presse", "t": "⌘", "raw": "LGUI", "q": "LGUI", "s": "Cmd", "kind": "key"}, {"verb": "tape", "t": "⌘⇥", "raw": "LG(TAB)", "q": "LG(TAB)", "s": "Tab", "kind": "key", "eff": true}, {"verb": "attend", "t": "le relâchement", "kind": "note", "raw": "&macro_pause_for_release"}, {"verb": "relâche", "t": "ARROW", "s": "maintien", "kind": "layer", "raw": "&mo ARROW"}, {"verb": "relâche", "t": "⌘", "raw": "LGUI", "q": "LGUI", "s": "Cmd", "kind": "key"}]}, {"id": "spacecolon", "label": "Espace insécable + :", "steps": [{"verb": "presse", "t": "⇧", "raw": "LSHFT", "q": "LSHFT", "s": "Shift", "kind": "key"}, {"verb": "tape", "t": "⍽", "raw": "LS(SPACE)", "q": "LS(SPACE)", "s": "insécable", "kind": "key", "eff": true}, {"verb": "tape", "t": ":", "raw": "LS(C)", "q": "LS(C)", "kind": "key", "eff": true}, {"verb": "tape", "t": "⍽", "raw": "LS(SPACE)", "q": "LS(SPACE)", "s": "insécable", "kind": "key", "eff": true}, {"verb": "relâche", "t": "⇧", "raw": "LSHFT", "q": "LSHFT", "s": "Shift", "kind": "key"}]}], "morphs": [{"id": "agrvtab", "label": {"t": "à", "raw": "&agrvtab", "q": "Q", "kind": "key", "morph": "⌘+ → ⇥", "beh": "agrvtab"}}], "notes": [{"level": "info", "combo": "to-0-fromkeypad", "text": "« to-0-fromkeypad » vise le calque par numéro (0) ; un nom de calque (#define) résisterait mieux à un réordonnancement."}, {"level": "info", "combo": "esc", "text": "« esc » liste ses calques par numéros (0 1 2 4 5 6 7) : soit OPTIM, LOWER, MOUSE, NUMBERS, KEYPAD, SYMBOL, ARROW."}]};</script>
+<script>
+(function () {
+  const D = DATA;
+  const NS = "http://www.w3.org/2000/svg";
+  const CATS = [
+    { id: "spacing", label: "Espacement", re: /spac/i },
+    { id: "chars", label: "Caractères", re: /letter|charact/i },
+    { id: "layers", label: "Calques", re: /layer/i },
+    { id: "editing", label: "Édition", re: /edit/i },
+    { id: "apps", label: "Fenêtres et apps", re: /switch/i },
+    { id: "escape", label: "Échappement", re: /escape/i },
+    { id: "system", label: "Système", re: /system/i },
+    { id: "appspec", label: "Raccourcis d'app", re: /.*/ }
+  ];
+  D.combos.forEach(c => { c.cat = (CATS.find(k => k.re.test(c.section || "")) || CATS[CATS.length - 1]).id; });
+  const catVar = id => `var(--c-${id})`;
+
+  const store = {
+    get(k, d) { try { const v = localStorage.getItem("totemviz." + k); return v === null ? d : v; } catch (e) { return d; } },
+    set(k, v) { try { localStorage.setItem("totemviz." + k, v); } catch (e) {} }
+  };
+  const S = { layer: 0, label: store.get("label", "opt"), combos: store.get("combos", "on"), scope: "layer",
+              cats: new Set(CATS.map(c => c.id)), selKey: null, focus: null };
+
+  // ---------- géométrie
+  const rot = (x, y, a, cx, cy) => { const r = a * Math.PI / 180, dx = x - cx, dy = y - cy;
+    return [cx + dx * Math.cos(r) - dy * Math.sin(r), cy + dx * Math.sin(r) + dy * Math.cos(r)]; };
+  const K = D.layout.map(k => {
+    const c = k.r ? rot(k.x + k.w / 2, k.y + k.h / 2, k.r, k.rx, k.ry) : [k.x + k.w / 2, k.y + k.h / 2];
+    const corners = [[k.x, k.y], [k.x + k.w, k.y], [k.x, k.y + k.h], [k.x + k.w, k.y + k.h]]
+      .map(p => k.r ? rot(p[0], p[1], k.r, k.rx, k.ry) : p);
+    return { ...k, cx: c[0], cy: c[1], corners };
+  });
+  const all = K.flatMap(k => k.corners);
+  const pad = 26, minX = Math.min(...all.map(p => p[0])) - pad, maxX = Math.max(...all.map(p => p[0])) + pad,
+        minY = Math.min(...all.map(p => p[1])) - pad, maxY = Math.max(...all.map(p => p[1])) + pad;
+  const svg = document.getElementById("kb");
+  svg.setAttribute("viewBox", `${minX} ${minY} ${maxX - minX} ${maxY - minY}`);
+
+  const el = (tag, attrs, parent, text) => { const e = document.createElementNS(NS, tag);
+    for (const a in attrs) e.setAttribute(a, attrs[a]); if (text != null) e.textContent = text; if (parent) parent.appendChild(e); return e; };
+  const h = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+
+  const L = () => D.layers[S.layer];
+  const lab = k => !k ? "" : (S.label === "q" ? (k.kind === "key" || k.hold != null ? (k.q || k.raw) : k.raw.replace(/^&/, "")) : k.t);
+  const fit = (s, max, base) => { const n = [...s].length; return Math.max(11, Math.min(base, Math.floor(max / Math.max(1, n) * 1.75))); };
+
+  // ---------- touches
+  function keyLabel(k) {
+    if (!k) return { main: "" };
+    if (k.kind === "trans") return { main: "▽", cls: "trans" };
+    if (k.kind === "none") return { main: "" };
+    return { main: lab(k) };
+  }
+  function drawKeys(gKeys) {
+    const layer = L();
+    K.forEach((g, i) => {
+      const k = layer.keys[i] || { kind: "none", t: "", raw: "" };
+      const grp = el("g", { class: "cap " + (k.kind || ""), "data-pos": i, transform: g.r ? `rotate(${g.r} ${g.rx} ${g.ry})` : "" }, gKeys);
+      el("rect", { class: "shadow", x: g.x + 7, y: g.y + 9, width: g.w - 14, height: g.h - 14, rx: 10 }, grp);
+      el("rect", { class: "face", x: g.x + 7, y: g.y + 6, width: g.w - 14, height: g.h - 14, rx: 10 }, grp);
+      el("text", { class: "pos", x: g.x + 12, y: g.y + 16 }, grp, i);
+      const kl = keyLabel(k);
+      const cx = g.x + g.w / 2;
+      const hasHold = k.hold != null;
+      const main = el("text", { class: "main" + (k.kind === "macro" ? " macro" : k.kind === "layer" ? " layerk" : k.kind === "mouse" ? " mouse" : k.kind === "system" ? " system" : k.dead ? " dead" : ""),
+        x: cx, y: g.y + (hasHold ? 38 : 42) }, grp, kl.main);
+      main.setAttribute("font-size", S.label === "q" ? fit(kl.main, 74, 17) : fit(kl.main, 74, 28));
+      if (k.kind === "trans") { main.setAttribute("fill", "var(--faint)"); main.setAttribute("font-size", 16); }
+      const sub = S.label === "q" ? "" : (k.s || (k.morph ? k.morph : ""));
+      if (sub && !hasHold) el("text", { class: "sub", x: cx, y: g.y + 68 }, grp, sub);
+      if (hasHold) el("text", { class: "hold" + (k.holdKind === "layer" ? " layer" : ""), x: cx, y: g.y + 68 }, grp, k.hold);
+      const tip = el("title", {}, grp, [`#${i}`, k.raw, k.q && k.q !== k.raw ? `→ ${k.q}` : "", k.name ? `(${k.name})` : ""].filter(Boolean).join("  "));
+      grp.addEventListener("mouseenter", () => inspectKey(i));
+      grp.addEventListener("click", () => { S.selKey = S.selKey === i ? null : i; S.focus = null; render(); inspectKey(i); });
+    });
+  }
+
+  // ---------- combos
+  const activeCombos = () => D.combos.filter(c => c.layers.includes(S.layer) && S.cats.has(c.cat));
+  function badgeLabel(c) { return S.label === "q" ? c.binding.replace(/^&kp /, "").replace(/^&/, "") : c.out.t; }
+  function layoutBadges(list) {
+    const items = list.map(c => {
+      const pts = c.keys.map(p => K[p]);
+      const x = pts.reduce((s, p) => s + p.cx, 0) / pts.length, y = pts.reduce((s, p) => s + p.cy, 0) / pts.length;
+      const t = badgeLabel(c), n = [...t].length;
+      const w = Math.max(30, Math.min(140, n * (S.label === "q" ? 8 : 10) + 14)), hgt = 22;
+      return { c, x, y, x0: x, y0: y, w, h: hgt, t };
+    });
+    for (let it = 0; it < 120; it++) {
+      for (const a of items) {
+        let fx = (a.x0 - a.x) * 0.04, fy = (a.y0 - a.y) * 0.04;
+        for (const k of K) {           // laisse lisible le centre des touches
+          const dx = a.x - k.cx, dy = a.y - (k.cy - 6), ox = a.w / 2 + 18 - Math.abs(dx), oy = a.h / 2 + 18 - Math.abs(dy);
+          if (ox > 0 && oy > 0) { if (oy < ox) fy += (dy >= 0 ? 1 : -1) * oy * 0.25; else fx += (dx >= 0 ? 1 : -1) * ox * 0.25; }
+        }
+        for (const b of items) { if (a === b) continue;
+          const dx = a.x - b.x, dy = a.y - b.y, ox = (a.w + b.w) / 2 + 4 - Math.abs(dx), oy = (a.h + b.h) / 2 + 4 - Math.abs(dy);
+          if (ox > 0 && oy > 0) { if (oy <= ox) fy += (dy === 0 ? (a.c.id < b.c.id ? -1 : 1) : Math.sign(dy)) * oy * 0.3;
+                                  else fx += (dx === 0 ? 1 : Math.sign(dx)) * ox * 0.3; }
+        }
+        a.x += fx; a.y += fy;
+      }
+    }
+    return items;
+  }
+  function drawCombos(gW, gB) {
+    const items = layoutBadges(activeCombos());
+    items.forEach(it => {
+      const col = catVar(it.c.cat);
+      const w = el("g", { class: "wire", "data-id": it.c.id }, gW);
+      const far = it.c.keys.length > 2 || Math.hypot(it.x - it.x0, it.y - it.y0) > 14 ||
+                  Math.hypot(K[it.c.keys[0]].cx - K[it.c.keys[1]].cx, K[it.c.keys[0]].cy - K[it.c.keys[1]].cy) > 120;
+      it.c.keys.forEach(p => {
+        const tx = K[p].cx, ty = K[p].cy + 4;   // ancre entre libellé principal et maintien
+        if (far) el("line", { x1: it.x, y1: it.y, x2: tx, y2: ty, stroke: col }, w);
+        el("circle", { cx: tx, cy: ty, r: 4, fill: col }, w); });
+      const b = el("g", { class: "badge", "data-id": it.c.id, tabindex: 0, role: "button", "aria-label": `${it.c.id} : ${it.c.out.t}` }, gB);
+      el("rect", { x: it.x - it.w / 2, y: it.y - it.h / 2, width: it.w, height: it.h, rx: 6, fill: col, stroke: "var(--surface)" }, b);
+      const tx = el("text", { x: it.x, y: it.y + 1 }, b, it.t);
+      if (S.label === "q") tx.setAttribute("font-size", 12);
+      el("title", {}, b, `${it.c.id} · ${it.c.binding}`);
+      b.addEventListener("mouseenter", () => focusCombo(it.c.id));
+      b.addEventListener("mouseleave", () => focusCombo(null));
+      b.addEventListener("focus", () => focusCombo(it.c.id));
+      b.addEventListener("click", () => { S.focus = S.focus === it.c.id ? null : it.c.id; focusCombo(S.focus, true); });
+    });
+  }
+  function focusCombo(id, sticky) {
+    if (!id && S.focus && !sticky) id = S.focus;
+    svg.classList.toggle("focus", !!id);
+    svg.querySelectorAll(".badge, .wire").forEach(e => e.classList.toggle("on", e.dataset.id === id));
+    const c = id && D.combos.find(x => x.id === id);
+    svg.querySelectorAll(".cap").forEach(e => e.classList.toggle("hit", !!c && c.keys.includes(+e.dataset.pos)));
+    document.querySelectorAll(".row").forEach(r => r.classList.toggle("on", r.dataset.id === id));
+    if (c) inspectCombo(c);
+  }
+
+  // ---------- inspecteur
+  const insp = document.getElementById("insp");
+  function dl(pairs) { const d = h("dl"); pairs.filter(p => p[1] != null && p[1] !== "").forEach(([a, b]) => {
+      d.appendChild(h("dt", null, a)); const dd = h("dd"); if (b instanceof Node) dd.appendChild(b); else dd.textContent = b; d.appendChild(dd); }); return d; }
+  const codeEl = t => { const c = h("code", null, t); return c; };
+  function inspectIdle() { insp.innerHTML = ""; insp.appendChild(h("div", "hint",
+      "Survolez une touche ou un combo pour voir son détail. Cliquez une touche pour ne lister que les combos qui l'utilisent ; cliquez un combo pour le garder en surbrillance.")); }
+  function inspectKey(i) {
+    const k = L().keys[i] || {};
+    insp.innerHTML = "";
+    const t = h("div", "ttl"); t.appendChild(h("span", null, `Touche ${i} · ${L().name}`));
+    t.appendChild(h("span", "mono", k.t || (k.kind === "trans" ? "transparente" : "vide")));
+    insp.appendChild(t);
+    const used = D.combos.filter(c => c.keys.includes(i) && c.layers.includes(S.layer));
+    insp.appendChild(dl([
+      ["Binding ZMK", codeEl(k.raw || "")],
+      ["Keycode envoyé", k.q && k.q !== k.raw ? codeEl(k.q) : null],
+      ["Maintien", k.hold ? `${k.hold}${k.holdKind === "layer" ? " (calque)" : " (modificateur)"}` : null],
+      ["Avec ⌘ (mod-morph)", k.morph || null],
+      ["Raccourci nommé", k.name ? `${k.name}${k.app ? " — " + k.app : ""}` : null],
+      ["Note", k.dead ? "touche morte Optimot : elle attend la lettre suivante" : (k.s || null)],
+      ["Combos sur ce calque", used.length ? used.map(c => `${c.id} (${c.out.t})`).join(", ") : "aucun"]
+    ]));
+  }
+  function inspectCombo(c) {
+    insp.innerHTML = "";
+    const t = h("div", "ttl"); const sw = h("i"); sw.style.cssText = `width:10px;height:10px;border-radius:3px;display:inline-block;background:${catVar(c.cat)}`;
+    t.appendChild(sw); t.appendChild(h("span", "mono", c.id)); t.appendChild(h("span", null, `→ ${c.out.t}`)); insp.appendChild(t);
+    const keys = c.keys.map(p => `${p} « ${(L().keys[p] || {}).t || "·"} »`).join(" + ");
+    insp.appendChild(dl([
+      ["Touches", keys], ["Binding ZMK", codeEl(c.binding)],
+      ["Délais", `timeout ${c.term} ms · require-prior-idle ${c.idle} ms`],
+      ["Calques", c.layers.map(i => D.layers[i].name).join(", ")],
+      ["Section", c.section || ""], ["Commentaire", c.comment || null]
+    ]));
+  }
+
+  // ---------- onglets, légende
+  function renderTabs() {
+    const tabs = document.getElementById("tabs"); tabs.innerHTML = "";
+    D.layers.forEach((l, i) => {
+      const b = h("button", "tab"); b.type = "button"; b.id = "tab-" + i; b.setAttribute("role", "tab");
+      b.setAttribute("aria-selected", i === S.layer ? "true" : "false");
+      b.appendChild(h("span", "n", i)); b.appendChild(h("span", null, l.name));
+      const n = D.combos.filter(c => c.layers.includes(i)).length; if (n) b.appendChild(h("span", "cnt", n));
+      b.addEventListener("click", () => { S.layer = i; S.selKey = null; S.focus = null; try { history.replaceState(null, "", "#" + l.name.toLowerCase()); } catch (e) {} render(); });
+      tabs.appendChild(b);
+    });
+  }
+  function renderLegend() {
+    const lg = document.getElementById("legend"); lg.innerHTML = "";
+    CATS.filter(k => D.combos.some(c => c.cat === k.id)).forEach(k => {
+      const b = h("button", "chip"); b.type = "button"; b.id = "cat-" + k.id; b.setAttribute("aria-pressed", S.cats.has(k.id));
+      const i = h("i"); i.style.background = catVar(k.id); b.appendChild(i); b.appendChild(document.createTextNode(k.label));
+      b.addEventListener("click", () => { S.cats.has(k.id) ? S.cats.delete(k.id) : S.cats.add(k.id); render(); });
+      lg.appendChild(b);
+    });
+  }
+
+  // ---------- liste des combos
+  function kc(t, empty) { const s = h("span", "kc" + (empty ? " empty" : ""), t || "·"); return s; }
+  function renderList() {
+    const box = document.getElementById("comboList"); box.innerHTML = "";
+    let list = S.scope === "layer" ? D.combos.filter(c => c.layers.includes(S.layer)) : D.combos.slice();
+    list = list.filter(c => S.cats.has(c.cat));
+    if (S.selKey != null) list = list.filter(c => c.keys.includes(S.selKey));
+    document.getElementById("comboTitle").textContent = (S.scope === "layer" ? `Combos actifs sur ${L().name}` : "Tous les combos") +
+      (S.selKey != null ? ` · touche ${S.selKey}` : "") + ` (${list.length})`;
+    if (!list.length) { box.appendChild(h("div", "empty-note", S.selKey != null ? "Aucun combo n'utilise cette touche ici. Cliquez de nouveau la touche pour retirer le filtre." : "Aucun combo sur ce calque.")); return; }
+    CATS.forEach(cat => {
+      const rows = list.filter(c => c.cat === cat.id); if (!rows.length) return;
+      const g = h("div", "group"); const h3 = h("h3"); const sw = h("i"); sw.style.background = catVar(cat.id);
+      h3.appendChild(sw); h3.appendChild(document.createTextNode(cat.label));
+      const secs = [...new Set(rows.map(r => r.section).filter(Boolean))]; if (secs.length) h3.appendChild(h("span", "src", "// " + secs.join(", ")));
+      g.appendChild(h3);
+      rows.forEach(c => {
+        const r = h("div", "row" + (c.layers.includes(S.layer) ? "" : " inactive")); r.dataset.id = c.id; r.tabIndex = 0;
+        const ks = h("div", "keys");
+        c.keys.forEach((p, j) => { if (j) ks.appendChild(h("span", "plus", "+")); const k = L().keys[p] || {};
+          const t = k.kind === "trans" ? "▽" : (S.label === "q" ? (k.q || "") : (k.t || "")); ks.appendChild(kc(t, !k.t)); });
+        r.appendChild(ks);
+        const o = h("div", "out"); o.appendChild(h("span", null, S.label === "q" ? c.binding.replace(/^&kp /, "") : c.out.t));
+        if (c.out.s && S.label !== "q") o.appendChild(h("small", null, c.out.s)); r.appendChild(o);
+        const n = h("div", "name"); n.appendChild(h("div", "id", c.id));
+        n.appendChild(h("div", "ls", c.layers.map(i => D.layers[i].name).join(" · "))); r.appendChild(n);
+        r.appendChild(h("div", "timing", `${c.term} ms · idle ${c.idle}`));
+        r.addEventListener("mouseenter", () => { if (c.layers.includes(S.layer)) focusCombo(c.id); else inspectCombo(c); });
+        r.addEventListener("mouseleave", () => focusCombo(null));
+        r.addEventListener("click", () => { if (!c.layers.includes(S.layer)) { S.layer = c.layers[0]; S.focus = c.id; render(); focusCombo(c.id, true); }
+                                            else { S.focus = S.focus === c.id ? null : c.id; focusCombo(S.focus, true); } });
+        g.appendChild(r);
+      });
+      box.appendChild(g);
+    });
+  }
+
+  // ---------- macros
+  const VERB = { "tape": "", "presse": "↓", "relâche": "↑", "attend": "⏸" };
+  function renderMacros() {
+    const box = document.getElementById("macros"); box.innerHTML = "";
+    D.macros.forEach(m => {
+      const c = h("div", "macro");
+      const mh = h("div", "mh"); mh.appendChild(h("b", null, m.id)); if (m.label) mh.appendChild(h("span", null, m.label)); c.appendChild(mh);
+      const st = h("div", "steps");
+      m.steps.forEach((s, j) => {
+        if (j) st.appendChild(h("span", "arrow", "›"));
+        const e = h("span", "step"); if (VERB[s.verb]) e.appendChild(h("span", "v", VERB[s.verb]));
+        if (s.kind === "note") e.appendChild(h("span", null, "attend " + s.t));
+        else { const k = kc(S.label === "q" ? (s.q || s.raw) : s.t); if (s.eff) k.classList.add("eff"); k.title = (s.raw || "") + (s.s ? " — " + s.s : ""); e.appendChild(k); }
+        st.appendChild(e);
+      });
+      c.appendChild(st);
+      const typed = m.steps.filter(s => s.kind === "key" && s.verb === "tape" && !/^⇪/.test(s.t)).map(s => s.t);
+      if (typed.length && m.steps.every(s => !/^[⌘⌃]/.test(s.t || ""))) { const r = h("div", "result"); r.appendChild(document.createTextNode("Produit : "));
+        r.appendChild(h("b", null, typed.join("").replace(/⍽/g, " ").replace(/␣/g, " "))); c.appendChild(r); }
+      const users = [];
+      D.combos.forEach(cb => { if (cb.binding.split(/\s+/)[0] === "&" + m.id) users.push(`combo ${cb.id} (${cb.keys.join("+")})`); });
+      D.layers.forEach((l, li) => l.keys.forEach((k, ki) => { if (k.macro === m.id) users.push(`${l.name} #${ki}`); }));
+      c.appendChild(h("div", "used", users.length ? "Utilisée par : " + users.join(", ") : "Non utilisée dans la keymap"));
+      box.appendChild(c);
+    });
+    D.morphs.forEach(m => {
+      const c = h("div", "macro"); const mh = h("div", "mh"); mh.appendChild(h("b", null, m.id)); mh.appendChild(h("span", null, "mod-morph")); c.appendChild(mh);
+      const st = h("div", "steps"); st.appendChild(kc(m.label.t)); st.appendChild(h("span", "arrow", m.label.morph || "")); c.appendChild(st);
+      box.appendChild(c);
+    });
+  }
+  function renderNotes() {
+    const box = document.getElementById("notes"); box.innerHTML = "";
+    if (!D.notes.length) { box.appendChild(h("div", "empty-note", "Rien à signaler.")); return; }
+    D.notes.slice().sort((a, b) => (a.level === "warn" ? 0 : 1) - (b.level === "warn" ? 0 : 1)).forEach(n => {
+      const d = h("div", "note " + n.level); d.appendChild(h("span", "lvl", n.level === "warn" ? "À vérifier" : "Info")); d.appendChild(h("span", null, n.text));
+      d.addEventListener("click", () => { const c = D.combos.find(x => x.id === n.combo); if (c) { S.layer = c.layers[0]; S.focus = c.id; render(); focusCombo(c.id, true); } });
+      box.appendChild(d);
+    });
+  }
+
+  // ---------- contrôles
+  function seg(id, key, onChange) {
+    const s = document.getElementById(id);
+    s.querySelectorAll("button").forEach(b => { b.setAttribute("aria-pressed", b.dataset.v === S[key]);
+      b.onclick = () => { S[key] = b.dataset.v; onChange && onChange(); render(); }; });
+  }
+  function render() {
+    seg("labelMode", "label", () => store.set("label", S.label));
+    seg("comboMode", "combos", () => store.set("combos", S.combos));
+    seg("scope", "scope");
+    renderTabs(); renderLegend();
+    svg.innerHTML = "";
+    el("title", {}, svg, `Totem — calque ${L().name}`);
+    const gKeys = el("g", {}, svg), gW = el("g", {}, svg), gB = el("g", {}, svg);
+    drawKeys(gKeys); drawCombos(gW, gB);
+    svg.classList.toggle("hidden-combos", S.combos === "off");
+    if (S.selKey != null) { const s = svg.querySelector(`.cap[data-pos="${S.selKey}"]`); if (s) s.classList.add("sel"); }
+    renderList(); renderMacros(); renderNotes();
+    if (S.focus) focusCombo(S.focus, true); else inspectIdle();
+  }
+  svg.addEventListener("mouseleave", () => { if (!S.focus) { focusCombo(null); inspectIdle(); } });
+
+  document.getElementById("meta").textContent = `config/totem.keymap · combos.dtsi · ${D.keylayout} · généré le ${D.generated}`;
+  document.getElementById("foot").textContent = `${D.layers.length} calques · ${D.combos.length} combos · ${D.macros.length} macros. Les caractères affichés viennent de ${D.keylayout} (couches base, ⇧, ⌥, ⇪ et ⌘). Pour régénérer : python3 tools/totem_viz.py`;
+  const hash = (location.hash || "").slice(1).toLowerCase();
+  const hi = D.layers.findIndex(l => l.name.toLowerCase() === hash); if (hi >= 0) S.layer = hi;
+  render();
+})();
+</script>
+
+</body>
+</html>
