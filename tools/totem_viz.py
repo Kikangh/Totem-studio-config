@@ -53,6 +53,10 @@ HID2VK = {
  "N7":26,"MINUS":27,"N8":28,"N0":29,"RBKT":30,"O":31,"U":32,"LBKT":33,"I":34,"P":35,
  "L":37,"J":38,"SQT":39,"K":40,"SEMI":41,"BSLH":42,"COMMA":43,"FSLH":44,"N":45,"M":46,
  "DOT":47,"GRAVE":10,"NUBS":50,"SPACE":49,
+ # pavé numérique (les caractères dépendent aussi de la disposition : avec Optimot, KP_DOT -> « , »)
+ "KP_DOT":65,"KP_MULTIPLY":67,"KP_PLUS":69,"KP_SLASH":75,"KP_MINUS":78,"KP_EQUAL":81,
+ "KP_N0":82,"KP_N1":83,"KP_N2":84,"KP_N3":85,"KP_N4":86,"KP_N5":87,"KP_N6":88,"KP_N7":89,
+ "KP_N8":91,"KP_N9":92,"KP_COMMA":95,
 }
 ALIAS = {"NUMBER_%d" % i: "N%d" % i for i in range(10)}
 ALIAS.update({"LEFT_BRACKET":"LBKT","RIGHT_BRACKET":"RBKT","APOS":"SQT","APOSTROPHE":"SQT",
@@ -136,7 +140,7 @@ class Translator:
                 t = "".join(g for k, g in MODGLYPH if k in mods) + c.upper()
                 s = ""
             else:
-                t, s = c, ("morte" if dead else "")
+                t, s = c, ("morte" if dead else "pavé" if base.startswith("KP_") else "")
         elif base in SPECIAL:
             g, s = SPECIAL[base]
             t = "".join(g2 for k, g2 in MODGLYPH if k in mods) + g
@@ -365,7 +369,8 @@ def build(args):
     layers = parse_keymap(km_text)
     names = [l["name"] for l in layers]
     tr = Translator(table, defs, km_meta)
-    behaviors = parse_behaviors(strip_block_comments(km_text))
+    no_comments = "\n".join(strip_line_comment(l)[0] for l in strip_block_comments(km_text).splitlines())
+    behaviors = parse_behaviors(no_comments)
     rd = Renderer(tr, names, behaviors)
 
     out_layers = [{"name": l["name"], "keys": [rd.binding(b) for b in l["bindings"]]} for l in layers]

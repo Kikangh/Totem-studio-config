@@ -95,32 +95,32 @@
 
 / {
     macros {
-        q_minuscule: q_minuscule {
-            label = "ZM_q_minuscul";
-            compatible = "zmk,behavior-macro";
-            //wait-ms = <40>;
-            tap-ms = <40>;
-            #binding-cells = <0>;
-            bindings
-                = <&macro_tap &kp CAPS>
-                , <&macro_press &kp LSHFT>
-                , <&macro_tap &kp OP_Q>
-                , <&macro_release &kp LSHFT>
-                , <&macro_tap &kp CAPS>
-                ;
-        };
-        q_maj: q_maj {
-            label = "ZM_q_maj";
-            compatible = "zmk,behavior-macro";
-            //wait-ms = <40>;
-            tap-ms = <40>;
-            #binding-cells = <0>;
-            bindings
-                = <&macro_tap &kp CAPS>
-                , <&macro_tap &kp OP_Q>
-                , <&macro_tap &kp CAPS>
-                ;
-        };
+//        q_minuscule: q_minuscule {
+//            label = "ZM_q_minuscul";
+//            compatible = "zmk,behavior-macro";
+//            //wait-ms = <40>;
+//            tap-ms = <40>;
+//            #binding-cells = <0>;
+//            bindings
+//                = <&macro_tap &kp CAPS>
+//                , <&macro_press &kp LSHFT>
+//                , <&macro_tap &kp OP_Q>
+//                , <&macro_release &kp LSHFT>
+//                , <&macro_tap &kp CAPS>
+//                ;
+//        };
+//        q_maj: q_maj {
+//            label = "ZM_q_maj";
+//            compatible = "zmk,behavior-macro";
+//            //wait-ms = <40>;
+//            tap-ms = <40>;
+//            #binding-cells = <0>;
+//            bindings
+//                = <&macro_tap &kp CAPS>
+//                , <&macro_tap &kp OP_Q>
+//                , <&macro_tap &kp CAPS>
+//                ;
+//        };
         win_list: win_list {
             label = "Current App Window list in Contexts App";
             compatible = "zmk,behavior-macro";
@@ -425,9 +425,9 @@
  bindings = <
 
                &kp KP_EQUAL      &kp KP_N9        &kp KP_N8        &kp KP_N7           &kp KP_PLUS                 &kp N6      &kp N7           &kp N8          &kp N9          &kp N0    
-               &hll SYMBOL KP_N0 &hml LCTRL KP_N6 &hml LALT KP_N5  &hml LGUI KP_N4     &kp KP_MINUS                &kp N1      &kp N2           &kp N3          &kp N4          &kp N5
+               &kp KP_N0         &kp KP_N6        &kp KP_N5        &kp KP_N4           &kp KP_MINUS                &kp N1      &kp N2           &kp N3          &kp N4          &kp N5
 &kp KP_NUMLOCK &kp KP_SLASH      &kp KP_N3        &kp KP_N2        &kp KP_N1           &kp KP_MULTIPLY             &kp OP_AT   &kp OP_HASH      &none           &none           &none  &kp BSPC
-                                                  &kp KP_DOT       &hsl LSHFT KP_COMMA &mt LGUI SPACE              &none &none &to 0
+                                                  &kp SPACE        &hsl LSHFT OP_DOT   &lt SYMBOL OP_COMM          &kp SPACE &none &to 0
                         >;
                 };
 
@@ -449,10 +449,10 @@
 //                                     ┗━━━━━━━━━━━┻━━━━━━━━━━━┻━━━━━━━━━━━┛   ┗━━━━━━━━━━━┻━━━━━━━━━━━┻━━━━━━━━━━━┛
  bindings = <
 
-      &none   &none &kp LA(N9)   &kp LA(N0)   &kp OP_H                &none &none &none &none &none    
-      &trans  &none &kp N9       &kp N0       &kp OP_J                &none &none &none &none &none
+      &none   &kp N7 &kp LA(N9)   &kp LA(N0)   &kp OP_H                &none &none &none &none &none    
+      &none   &none &kp N9       &kp N0       &kp OP_J                &none &none &none &none &none
 &none &none   &none &kp LA(OP_D) &kp LA(OP_L) &kp OP_M                &none &none &none &none &none &none
-                    &none        &none        &mt LGUI SPACE          &none &none &to 0
+                    &none        &none        &trans                  &none &none &to 0
                         >;
                 };
 
