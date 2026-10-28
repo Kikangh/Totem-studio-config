@@ -449,9 +449,9 @@
 //                                     ┗━━━━━━━━━━━┻━━━━━━━━━━━┻━━━━━━━━━━━┛   ┗━━━━━━━━━━━┻━━━━━━━━━━━┻━━━━━━━━━━━┛
  bindings = <
 
-      &none   &kp N7 &kp LA(N9)   &kp LA(N0)   &kp OP_H                &none &none &none &none &none    
-      &none   &none &kp N9       &kp N0       &kp OP_J                &none &none &none &none &none
-&none &none   &none &kp LA(OP_D) &kp LA(OP_L) &kp OP_M                &none &none &none &none &none &none
+      &none   &none  &kp LA(N9)   &kp LA(N0)   &kp BSPC                &none &none &none &none &none    
+      &none   &none &kp N9       &kp N0       &kp N7                  &none &none &none &none &none
+&none &none   &none &kp LA(OP_D) &kp LA(OP_L) &kp TAB                 &none &none &none &none &none &none
                     &none        &none        &trans                  &none &none &to 0
                         >;
                 };
