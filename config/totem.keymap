@@ -452,7 +452,7 @@
       &none   &none  &kp LA(N9)   &kp LA(N0)   &kp BSPC                &none &none &none &none &none    
       &none   &none &kp N9       &kp N0       &kp N7                  &none &none &none &none &none
 &none &none   &none &kp LA(OP_D) &kp LA(OP_L) &kp TAB                 &none &none &none &none &none &none
-                    &none        &none        &trans                  &none &none &to 0
+                    &none        &kp OP_COLN  &trans                  &none &none &to 0
                         >;
                 };
 
